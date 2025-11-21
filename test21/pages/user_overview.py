@@ -6,8 +6,8 @@ from db.db_functions_employees import employee_listview
 DB_PATH = "db/users.db"
 
 
-st.set_page_config(page_title="User Dashboard", layout="wide")
-st.title("User Dashboard")
+st.set_page_config(page_title="Employee Dashboard", layout="wide")
+st.title("Employee Dashboard")
 
 ### Access control, so only users can access this page ###
 if "role" not in st.session_state or st.session_state["role"] != "User":
