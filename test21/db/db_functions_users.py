@@ -6,7 +6,7 @@ DB_PATH = "db/users.db"
 
 ### Connecting to the database users.db ###
 def connect():
-    return sqlite3.connect(DB_USERS)
+    return sqlite3.connect(DB_PATH)
 
 ### Creating necessary tables for different role in main.py ###
 def create_tables():
