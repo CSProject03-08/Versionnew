@@ -2,11 +2,11 @@ import sqlite3
 import time
 import streamlit as st
 import pandas as pd
-DB_PATH = "db/users.db"
+DB_USERS = "db/users.db"
 
 ### Connecting to the database users.db ###
 def connect():
-    return sqlite3.connect(DB_PATH)
+    return sqlite3.connect(DB_USERS)
 
 ### Creating necessary tables for different role in main.py ###
 def create_tables():

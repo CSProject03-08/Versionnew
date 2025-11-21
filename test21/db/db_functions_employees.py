@@ -3,11 +3,11 @@ import time
 import streamlit as st
 import pandas as pd
 from datetime import date
-DB_PATH = "db/users.db"
+DB_USERS = "db/users.db"
 
 ### Connecting to the database trips.db ###
 def connect():
-    return sqlite3.connect(DB_PATH)
+    return sqlite3.connect(DB_USERS)
 
 def employee_listview():
     """
