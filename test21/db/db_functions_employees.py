@@ -3,7 +3,14 @@ import time
 import streamlit as st
 import pandas as pd
 from datetime import date
-DB_USERS = "db/users.db"
+#DB_USERS = "db/users.db"
+
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent
+DB_USERS = BASE_DIR / "users.db"
+
+
 
 ### Connecting to the database trips.db ###
 def connect():
