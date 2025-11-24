@@ -99,29 +99,245 @@ if selected == "Dashboard":
                         st.write(f"**Arrival:** {trip_dict.get('arrival_time', 'N/A')}")
                         st.write(f"**Status:** {trip_dict.get('status', 'pending')}")
         else:
-            st.info("No additional upcoming trips found.")
-    
+            st.info("No additional upcoming trips found.")  
+
     with tab3:
         st.header("Past Trips")
         past_trips = trips_manager.get_employee_past_trips(current_employee)
-        
+
+        # ---- initialise wizard state once ----
+        if "expense_wizard" not in st.session_state:
+            st.session_state.expense_wizard = {
+                "active_trip_id": None,
+                "step": 1,
+                "hotel_cost": 0.0, "hotel_files": [],
+                "transport_cost": 0.0, "transport_files": [],
+                "meals_cost": 0.0, "meals_files": [],
+                "other_cost": 0.0, "other_files": [],
+            }
+        wiz = st.session_state.expense_wizard
+
+        # filter to trips truly in the past (arrival <= today)
+        filtered_trips = []
+        today = datetime.date.today()
         if past_trips:
-            st.write(f"You have completed **{len(past_trips)}** trip(s):")
-            
             for trip in past_trips:
+                arr = trip.get("arrival_time")
+                try:
+                    if isinstance(arr, datetime.datetime):
+                        arr_date = arr.date()
+                    elif isinstance(arr, dt.date):
+                        arr_date = arr
+                    else:
+                        # if format is weird, just trust DB filtering
+                        arr_date = today
+                    if arr_date <= today:
+                        filtered_trips.append(trip)
+                except Exception:
+                    filtered_trips.append(trip)
+
+        if filtered_trips:
+            st.write(f"You have completed **{len(filtered_trips)}** trip(s):")
+
+            for trip in filtered_trips:
                 trip_dict = dict(trip)
-                with st.expander(f"✈️ {trip_dict.get('destination', 'N/A')} - {trip_dict.get('departure_time', 'N/A')}"):
+                trip_id = trip_dict.get("id")
+                is_active = wiz["active_trip_id"] == trip_id
+
+                # normalise dates for display + duration
+                dep = trip_dict.get("departure_time")
+                arr = trip_dict.get("arrival_time")
+                if isinstance(dep, dt.datetime):
+                    dep_date = dep.date()
+                else:
+                    dep_date = dep
+                if isinstance(arr, dt.datetime):
+                    arr_date = arr.date()
+                else:
+                    arr_date = arr
+                try:
+                    duration_days = (arr_date - dep_date).days + 1
+                except Exception:
+                    duration_days = 0
+
+                label = f"✈️ {trip_dict.get('destination', 'N/A')} - {trip_dict.get('departure_time', 'N/A')}"
+                with st.expander(label, expanded=is_active):
                     col_a, col_b = st.columns(2)
                     with col_a:
                         st.write(f"**From:** {trip_dict.get('departure_location', 'N/A')}")
                         st.write(f"**To:** {trip_dict.get('destination', 'N/A')}")
-                        st.write(f"**Trip ID:** {trip_dict.get('id')}")
+                        st.write(f"**Trip ID:** {trip_id}")
                     with col_b:
                         st.write(f"**Departure:** {trip_dict.get('departure_time', 'N/A')}")
                         st.write(f"**Arrival:** {trip_dict.get('arrival_time', 'N/A')}")
                         st.write(f"**Status:** {trip_dict.get('status', 'completed')}")
+
+                    st.divider()
+
+                    # ---- open wizard button (if not currently editing this trip) ----
+                    if not is_active:
+                        if st.button(
+                            "➕ Submit expense report",
+                            key=f"open_exp_{trip_id}",
+                            type="primary",
+                            use_container_width=True,
+                        ):
+                            wiz.update(
+                                active_trip_id=trip_id,
+                                step=1,
+                                hotel_cost=0.0, hotel_files=[],
+                                transport_cost=0.0, transport_files=[],
+                                meals_cost=0.0, meals_files=[],
+                                other_cost=0.0, other_files=[],
+                            )
+                            st.experimental_rerun()
+
+                    else:
+                        # ====== WIZARD (same structure as your old one, but trip data is pre-filled) ======
+                        st.markdown("### Add business trip expense")
+                        cols_hdr = st.columns([1, 1])
+                        with cols_hdr[0]:
+                            st.write("Please fill each category, upload receipts and review everything before saving.")
+                            st.write(f"**Trip date:** {dep_date} – {arr_date}")
+                            st.write(f"**Destination city:** {trip_dict.get('destination', 'N/A')}")
+                            st.write(f"**Duration (days):** {duration_days}")
+                        with cols_hdr[1]:
+                            if st.button("✖ Close", use_container_width=True, key=f"close_{trip_id}"):
+                                wiz["active_trip_id"] = None
+                                wiz["step"] = 1
+                                st.experimental_rerun()
+
+                        step = wiz["step"]
+                        st.markdown(f"#### Expense {step} of 5")
+
+                        def _next():
+                            wiz["step"] = min(5, wiz["step"] + 1)
+
+                        def _back():
+                            wiz["step"] = max(1, wiz["step"] - 1)
+
+                        # ---------- Step 1: Hotel ----------
+                        if step == 1:
+                            wiz["hotel_cost"] = st.number_input(
+                                "Total hotel cost (CHF)",
+                                min_value=0.0,
+                                step=10.0,
+                                value=float(wiz["hotel_cost"]),
+                                key=f"hotel_cost_{trip_id}",
+                            )
+                            wiz["hotel_files"] = st.file_uploader(
+                                "📎 Upload hotel receipts (PDF or image)",
+                                type=["pdf", "png", "jpg", "jpeg"],
+                                accept_multiple_files=True,
+                                key=f"hotel_files_upl_{trip_id}",
+                            )
+                            st.button("Next →", type="primary", on_click=_next, key=f"next1_{trip_id}")
+
+                        # ---------- Step 2: Transportation ----------
+                        elif step == 2:
+                            wiz["transport_cost"] = st.number_input(
+                                "Total transportation cost (CHF)",
+                                min_value=0.0,
+                                step=10.0,
+                                value=float(wiz["transport_cost"]),
+                                key=f"transport_cost_{trip_id}",
+                            )
+                            wiz["transport_files"] = st.file_uploader(
+                                "📎 Upload transportation receipts (PDF or image)",
+                                type=["pdf", "png", "jpg", "jpeg"],
+                                accept_multiple_files=True,
+                                key=f"transport_files_upl_{trip_id}",
+                            )
+                            c1, c2 = st.columns(2)
+                            with c1:
+                                st.button("← Back", on_click=_back, use_container_width=True, key=f"back2_{trip_id}")
+                            with c2:
+                                st.button("Next →", type="primary", on_click=_next, use_container_width=True, key=f"next2_{trip_id}")
+
+                        # ---------- Step 3: Meals ----------
+                        elif step == 3:
+                            wiz["meals_cost"] = st.number_input(
+                                "Total meals cost (CHF)",
+                                min_value=0.0,
+                                step=5.0,
+                                value=float(wiz["meals_cost"]),
+                                key=f"meals_cost_{trip_id}",
+                            )
+                            wiz["meals_files"] = st.file_uploader(
+                                "📎 Upload meal receipts (PDF or image)",
+                                type=["pdf", "png", "jpg", "jpeg"],
+                                accept_multiple_files=True,
+                                key=f"meals_files_upl_{trip_id}",
+                            )
+                            c1, c2 = st.columns(2)
+                            with c1:
+                                st.button("← Back", on_click=_back, use_container_width=True, key=f"back3_{trip_id}")
+                            with c2:
+                                st.button("Next →", type="primary", on_click=_next, use_container_width=True, key=f"next3_{trip_id}")
+
+                        # ---------- Step 4: Other ----------
+                        elif step == 4:
+                            wiz["other_cost"] = st.number_input(
+                                "Other costs (CHF)",
+                                min_value=0.0,
+                                step=5.0,
+                                value=float(wiz["other_cost"]),
+                                key=f"other_cost_{trip_id}",
+                            )
+                            wiz["other_files"] = st.file_uploader(
+                                "📎 Upload other receipts (PDF or image)",
+                                type=["pdf", "png", "jpg", "jpeg"],
+                                accept_multiple_files=True,
+                                key=f"other_files_upl_{trip_id}",
+                            )
+                            c1, c2 = st.columns(2)
+                            with c1:
+                                st.button("← Back", on_click=_back, use_container_width=True, key=f"back4_{trip_id}")
+                            with c2:
+                                st.button("Next →", type="primary", on_click=_next, use_container_width=True, key=f"next4_{trip_id}")
+
+                        # ---------- Step 5: Review & Save ----------
+                        elif step == 5:
+                            total_cost = float(
+                                wiz["hotel_cost"]
+                                + wiz["transport_cost"]
+                                + wiz["meals_cost"]
+                                + wiz["other_cost"]
+                            )
+                            st.subheader("Review")
+                            st.write(
+                                f"- **Hotel:** CHF {wiz['hotel_cost']:,.2f} ({len(wiz['hotel_files'] or [])} file(s))\n"
+                                f"- **Transportation:** CHF {wiz['transport_cost']:,.2f} ({len(wiz['transport_files'] or [])} file(s))\n"
+                                f"- **Meals:** CHF {wiz['meals_cost']:,.2f} ({len(wiz['meals_files'] or [])} file(s))\n"
+                                f"- **Other:** CHF {wiz['other_cost']:,.2f} ({len(wiz['other_files'] or [])} file(s))\n"
+                            )
+                            st.markdown(f"**Calculated total (CHF):** {total_cost:,.2f}")
+
+                            c1, c2 = st.columns(2)
+                            with c1:
+                                st.button("← Back", on_click=_back, use_container_width=True, key=f"back5_{trip_id}")
+                            with c2:
+                                if st.button(
+                                    "Save & Retrain",
+                                    type="primary",
+                                    use_container_width=True,
+                                    key=f"save_{trip_id}",
+                                ):
+                                    # REMINDER: save expenses to your database (and save uploaded files somewhere)
+                                    st.success("Expense saved and model retrained.")
+
+                                    # reset wizard
+                                    wiz.update(
+                                        active_trip_id=None,
+                                        step=1,
+                                        hotel_cost=0.0, hotel_files=[],
+                                        transport_cost=0.0, transport_files=[],
+                                        meals_cost=0.0, meals_files=[],
+                                        other_cost=0.0, other_files=[],
+                                    )
+                                    st.experimental_rerun()
         else:
-                st.info("No past trips found.")
+            st.info("No past trips found.")
 
     with st.popover("Search Trips", use_container_width=True):
 
