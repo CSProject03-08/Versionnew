@@ -1,0 +1,48 @@
+import requests
+
+BASE_URL = "https://data.xotelo.com/api"
+
+
+def search_hotels(city_query: str):
+    """
+    Search for hotels in a city.
+    Returns a list where each item contains hotel_key + location_key.
+    """
+    resp = requests.get(
+        f"{BASE_URL}/search",
+        params={"query": city_query},
+        timeout=10,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return data["result"]["list"]
+
+
+def get_city_price_range(location_key: str, limit: int = 30):
+    """
+    Returns the average of the (min+max)/2 price range across hotels in a city.
+    This acts as a baseline hotel price per night for that city.
+    """
+    resp = requests.get(
+        f"{BASE_URL}/list",
+        params={"location_key": location_key, "limit": limit, "offset": 0},
+        timeout=10,
+    )
+    resp.raise_for_status()
+    hotels = resp.json()["result"]["list"]
+
+    prices = []
+
+    for h in hotels:
+        pr = h.get("price_ranges", {})
+        minimum = pr.get("minimum")
+        maximum = pr.get("maximum")
+
+        if minimum is not None and maximum is not None:
+            avg_price = (minimum + maximum) / 2
+            prices.append(avg_price)
+
+    if not prices:
+        return None
+
+    return sum(prices) / len(prices)

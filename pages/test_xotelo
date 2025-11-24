@@ -1,0 +1,14 @@
+import streamlit as st
+from api.api_xotelo_hotels import search_hotels, get_city_price_range
+
+st.title("Xotelo API Test")
+
+city = st.text_input("Enter city", "Zurich, Switzerland")
+
+if st.button("Fetch hotel baseline"):
+    with st.spinner("Searching…"):
+        hotels = search_hotels(city)
+        loc_key = hotels[0]["location_key"]
+        baseline = get_city_price_range(loc_key)
+
+    st.success(f"Baseline hotel price for {city}: {baseline:.2f} CHF")
