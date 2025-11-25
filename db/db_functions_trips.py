@@ -4,6 +4,7 @@ import streamlit as st
 import pandas as pd
 from datetime import date
 from pathlib import Path
+from api.api_city_lookup import get_city_coords
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_USERS = BASE_DIR / "users.db"
