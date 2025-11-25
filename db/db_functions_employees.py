@@ -2,9 +2,11 @@ import sqlite3
 import time
 import streamlit as st
 import pandas as pd
-from ml.ml_model import get_city_coords, insert_expense_for_training, retrain_model
+from api.api_city_lookup import get_city_coords
+from ml.ml_model import retrain_model
+from ml.expenses_user_data import insert_expense_for_training
 from datetime import date
-from geopy.distance import geodesic 
+from geopy.distance import geodesic
 import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_DIR = os.path.join(BASE_DIR, "db")
