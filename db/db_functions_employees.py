@@ -2,7 +2,7 @@ import sqlite3
 import time
 import streamlit as st
 import pandas as pd
-from ml_model import get_city_coords, insert_expense_for_training, retrain_model
+from ml.ml_model import get_city_coords, insert_expense_for_training, retrain_model
 from datetime import date
 from geopy.distance import geodesic 
 import os
