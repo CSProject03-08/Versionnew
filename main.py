@@ -4,6 +4,7 @@ from db.db_functions_users import create_tables, add_user, get_user_by_credentia
 
 ### basic page settings ###
 st.set_page_config(page_title="Login", layout="centered", initial_sidebar_state="collapsed")
+st.title("Login")
 
 ### create db and table if non-existent ###
 create_tables()
@@ -11,8 +12,6 @@ create_tables()
 add_user("Admin", "123", "a@gmail.com", "Administrator")
 add_user("Manager", "123", "manager@gmail.com", "Manager")
 add_user("User", "123", "user@gmail.com", "User")
-
-st.title("Login")
 
 ### Login-inputs, with censored password ###
 with st.form("login_form"):
@@ -38,7 +37,7 @@ if submitted:
         elif role == "Manager":
             st.switch_page("pages/manager_overview.py")
         else:
-            st.switch_page("pages/employee_view.py")
+            st.switch_page("pages/user_overview.py")
     else:
         st.error("Wrong username or password.")
 
