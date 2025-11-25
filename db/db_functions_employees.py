@@ -109,7 +109,7 @@ def employee_listview():
                         meals_cost=0.0, meals_files=[],
                         other_cost=0.0, other_files=[],
                     )
-                    st.experimental_rerun()
+                    st.rerun()
             else:
                 # Wizard
                 st.markdown("### Add business trip expense")
@@ -130,7 +130,7 @@ def employee_listview():
                     ):
                         wiz["active_trip_id"] = None
                         wiz["step"] = 1
-                        st.experimental_rerun()
+                        st.rerun()
 
                 step = wiz["step"]
                 st.markdown(f"#### Expense {step} of 5")
@@ -342,4 +342,4 @@ def employee_listview():
                                 other_cost=0.0,
                                 other_files=[],
                             )
-                            st.experimental_rerun()
+                            st.rerun()
