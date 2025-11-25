@@ -3,16 +3,15 @@ import time
 import streamlit as st
 import pandas as pd
 from datetime import date
-from pathlib import Path
-
-BASE_DIR = Path(__file__).resolve().parent
-DB_USERS = BASE_DIR / "users.db"
-
-
+import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_DIR = os.path.join(BASE_DIR, "db")
+os.makedirs(DB_DIR, exist_ok=True)
+DB_PATH = os.path.join(DB_DIR, "users.db")
 
 ### Connecting to the database trips.db ###
 def connect():
-    return sqlite3.connect(DB_USERS)
+    return sqlite3.connect(DB_PATH)
 
 def employee_listview():
     """

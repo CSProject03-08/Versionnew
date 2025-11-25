@@ -2,15 +2,14 @@ import sqlite3
 import time
 import streamlit as st
 import pandas as pd
-from pathlib import Path
-
-BASE_DIR = Path(__file__).resolve().parent
-DB_USERS = BASE_DIR / "users.db"
-
-
+import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_DIR = os.path.join(BASE_DIR, "db")
+os.makedirs(DB_DIR, exist_ok=True)
+DB_PATH = os.path.join(DB_DIR, "users.db")
 ### Connecting to the database users.db ###
 def connect():
-    return sqlite3.connect(DB_USERS)
+    return sqlite3.connect(DB_PATH)
 
 ### Creating necessary tables for different role in main.py ###
 def create_tables():
@@ -101,7 +100,7 @@ def get_user_by_credentials(username, password):
 
 ### Assign sortkey to roles for user management ###
 def get_role_sortkey(role):
-    conn = sqlite3.connect(DB_USERS)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('SELECT sortkey FROM roles WHERE role = ?', (role,))
     data = c.fetchone()[0]
@@ -111,7 +110,7 @@ def get_role_sortkey(role):
 ### List of all users under own role_sortkey ###
 def list_roles_editable():
     current_sortkey = st.session_state["role_sortkey"]
-    conn = sqlite3.connect(DB_USERS)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
     c.execute("""
@@ -239,7 +238,7 @@ def del_user_dropdown(title: str = "Delete user"):
         return
 
     current_sortkey = st.session_state["role_sortkey"]
-    conn = sqlite3.connect(DB_USERS)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
     c.execute("""
@@ -263,7 +262,7 @@ def del_user_dropdown(title: str = "Delete user"):
 
         if st.button("Delete user"):
             username = selected_user.split("·")[0].strip()
-            conn = sqlite3.connect(DB_USERS)
+            conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
             c.execute("DELETE FROM users WHERE username = ?", (username,))
             conn.commit()
@@ -279,7 +278,7 @@ def del_user_dropdown_admin(title: str = "Delete user"):
         return
 
     current_sortkey = st.session_state["role_sortkey"]
-    conn = sqlite3.connect(DB_USERS)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
     c.execute("""
@@ -302,7 +301,7 @@ def del_user_dropdown_admin(title: str = "Delete user"):
 
         if st.button("Delete user"):
             username = selected_user.split("·")[0].strip()
-            conn = sqlite3.connect(DB_USERS)
+            conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
             c.execute("DELETE FROM users WHERE username = ?", (username,))
             conn.commit()
@@ -319,7 +318,7 @@ def edit_user_dropdown(title: str = "Edit user"):
 
     current_sortkey = st.session_state["role_sortkey"]
 
-    conn = sqlite3.connect(DB_USERS)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
     c.execute("""
@@ -341,7 +340,7 @@ def edit_user_dropdown(title: str = "Edit user"):
         user_list = [u[0] for u in users]
         selected_user = st.selectbox("Select user to edit", user_list)
 
-        conn = sqlite3.connect(DB_USERS)
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("SELECT username, password, email, role FROM users WHERE username = ?", (selected_user,))
         user_data = c.fetchone()
@@ -365,7 +364,7 @@ def edit_user_dropdown(title: str = "Edit user"):
             submitted = st.form_submit_button("Save changes")
 
         if submitted:
-            conn = sqlite3.connect(DB_USERS)
+            conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
             c.execute("""
                 UPDATE users
@@ -387,7 +386,7 @@ def edit_user_dropdown_admin(title: str = "Edit user"):
 
     current_sortkey = st.session_state["role_sortkey"]
 
-    conn = sqlite3.connect(DB_USERS)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
     c.execute("""
@@ -408,7 +407,7 @@ def edit_user_dropdown_admin(title: str = "Edit user"):
         user_list = [u[0] for u in users]
         selected_user = st.selectbox("Select user to edit", user_list)
 
-        conn = sqlite3.connect(DB_USERS)
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
 
         c.execute("""
@@ -438,7 +437,7 @@ def edit_user_dropdown_admin(title: str = "Edit user"):
             submitted = st.form_submit_button("Save changes")
 
         if submitted:
-            conn = sqlite3.connect(DB_USERS)
+            conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
 
             c.execute("""
@@ -482,7 +481,7 @@ def register_main(title: str = "Register as manager"):
             role = "Manager"
 
             try:
-                conn = sqlite3.connect(DB_USERS)
+                conn = sqlite3.connect(DB_PATH)
                 c = conn.cursor()
 
                 c.execute(
@@ -582,7 +581,7 @@ def get_users_under_me() -> pd.DataFrame | None:
         return None
 
     current = st.session_state["role_sortkey"]
-    conn = sqlite3.connect(DB_USERS)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
         SELECT u.username, u.email, u.role, r.sortkey, u.manager_ID

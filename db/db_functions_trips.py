@@ -3,16 +3,15 @@ import time
 import streamlit as st
 import pandas as pd
 from datetime import date
-from pathlib import Path
-from api.api_city_lookup import get_city_coords
-
-BASE_DIR = Path(__file__).resolve().parent
-DB_USERS = BASE_DIR / "users.db"
-
+import os
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_DIR = os.path.join(BASE_DIR, "db")
+os.makedirs(DB_DIR, exist_ok=True)
+DB_PATH = os.path.join(DB_DIR, "users.db")
 
 ### Connecting to the database trips.db ###
 def connect():
-    return sqlite3.connect(DB_USERS)
+    return sqlite3.connect(DB_PATH)
 
 def create_trip_table():
     conn = connect()
@@ -145,44 +144,6 @@ def create_trip_dropdown(title: str = "Create new trip"):
             occasion = st.text_input("Occasion")
             manager_ID = int(st.session_state["user_ID"])
 
-            # predictions based on ML
-            duration_days = 0
-            try:
-                duration_days = (end_date - start_date).days + 1
-                if duration_days < 1:
-                    duration_days = 0
-            except Exception:
-                duration_days = 0
-
-            distance_km = None
-            if origin and destination:
-                o = get_city_coords(origin)
-                d = get_city_coords(destination)
-                if o and d:
-                    distance_km = geodesic(o, d).km
-
-            predicted_cost = None
-            if distance_km is not None and duration_days > 0:
-                model = load_model()
-                if model is not None:
-                    X = pd.DataFrame([{
-                        "dest_city": destination,
-                        "distance_km": distance_km,
-                        "duration_days": duration_days,
-                    }])
-                    predicted_cost = float(model.predict(X)[0])
-                    st.metric(
-                        "Estimated total trip cost (CHF)",
-                        f"{predicted_cost:,.2f}",
-                        help="Based on historical seed data and employee expense reports.",
-                    )
-                else:
-                    st.info("Prediction model not trained yet – no estimate available.")
-            else:
-                st.info("Enter origin, destination and valid dates to see a cost estimate.")
-            # end ML code
-
-            # load employees for assignment
             conn = connect()
             user_df = pd.read_sql_query("""SELECT u.user_ID, u.username FROM users u 
                                         JOIN roles r ON u.role = r.role 
