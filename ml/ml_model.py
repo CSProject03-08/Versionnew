@@ -1,0 +1,150 @@
+import sqlite3
+import pickle
+from pathlib import Path
+
+import pandas as pd
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.pipeline import Pipeline
+from sklearn.linear_model import LinearRegression  # multiple linear regression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error
+
+DB_PATH = "expenses_user_data.db"   # SQLite DB where user-submitted and seed data is stored
+MODEL_PATH = "model.pkl"            # pickle file for model
+TABLE_NAME = "expenses_user_data"   # keep it consistent everywhere
+
+
+def _make_pipeline():
+    """
+    Build the sklearn pipeline:
+    - OneHotEncode dest_city
+    - pass through distance_km and duration_days as numeric
+    - LinearRegression model
+    """
+    categorical_cols = ["dest_city"]
+    numeric_cols = ["distance_km", "duration_days"]
+
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_cols),
+            ("num", "passthrough", numeric_cols),
+        ]
+    )
+
+    pipe = Pipeline(steps=[
+        ("pre", preprocessor),
+        ("model", LinearRegression()),
+    ])
+    return pipe
+
+
+def _ensure_table(conn: sqlite3.Connection):
+    """
+    Ensure the training table exists in the SQLite DB.
+    """
+    conn.execute(f"""
+        CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT,
+            date TEXT,
+            dest_city TEXT,
+            duration_days REAL,
+            distance_km REAL,
+            total_cost REAL
+        );
+    """)
+    conn.commit()
+
+
+# initial train of model with sample data
+def initial_train_from_csv(csv_path: str):
+    """
+    Seed the DB from a CSV (e.g. seed_trips.csv) and train the initial model.
+
+    CSV must contain at least:
+      - dest_city
+      - duration_days
+      - distance_km
+      - total_cost
+    """
+    df = pd.read_csv(csv_path)
+
+    # minimal schema check
+    needed = {"dest_city", "duration_days", "distance_km", "total_cost"}
+    missing = needed - set(df.columns)
+    if missing:
+        raise ValueError(f"CSV is missing required columns: {sorted(missing)}")
+
+    # seed rows into DB, tagged as 'seed' so you can filter later if needed
+    df_to_db = df.assign(user_id="seed", date="2025-01-01")[
+        ["user_id", "date", "dest_city", "duration_days", "distance_km", "total_cost"]
+    ]
+
+    conn = sqlite3.connect(DB_PATH)
+    _ensure_table(conn)
+    df_to_db.to_sql(TABLE_NAME, conn, if_exists="append", index=False)
+    conn.close()
+
+    # train + save
+    return retrain_model()
+
+
+# subsequent training model with user + seed data
+def retrain_model():
+    """
+    Train (or retrain) the model on all rows in the training table.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    _ensure_table(conn)
+    df = pd.read_sql_query(
+        f"SELECT dest_city, distance_km, duration_days, total_cost FROM {TABLE_NAME}",
+        conn
+    )
+    conn.close()
+
+    if df.empty:
+        return None  # nothing to train yet
+
+    X = df[["dest_city", "distance_km", "duration_days"]]
+    y = df["total_cost"]
+
+    pipe = _make_pipeline()
+
+    # Hold-out evaluation if we have enough samples
+    if len(df) >= 8:
+        X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, random_state=42)
+        pipe.fit(X_tr, y_tr)
+        mae = mean_absolute_error(y_te, pipe.predict(X_te))
+    else:
+        pipe.fit(X, y)
+        mae = None
+
+    with open(MODEL_PATH, "wb") as f:
+        pickle.dump(pipe, f)
+
+    return mae
+
+
+def load_model():
+    """
+    Load the trained model from disk, or return None if it doesn't exist yet.
+    """
+    if not Path(MODEL_PATH).exists():
+        return None
+    with open(MODEL_PATH, "rb") as f:
+        return pickle.load(f)
+    
+
+if __name__ == "__main__":
+    # Find seed_trips.csv in the same folder as this file
+    here = Path(__file__).resolve().parent
+    csv_path = here / "seed_trips.csv"
+
+    try:
+        mae = initial_train_from_csv(csv_path)
+        print("✅ Model trained successfully.")
+        print("MAE:", mae)
+    except FileNotFoundError:
+        print(f"❌ Could not find seed_trips.csv at {csv_path}. Run your generator or fix the path.")
+        raise
