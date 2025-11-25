@@ -144,6 +144,58 @@ def create_trip_dropdown(title: str = "Create new trip"):
             occasion = st.text_input("Occasion")
             manager_ID = int(st.session_state["user_ID"])
 
+            def create_trip_dropdown(title: str = "Create new trip"):
+    with st.expander(title, expanded=False):
+        with st.form("Create a trip", clear_on_submit=True):
+            origin = st.text_input("Origin")
+            destination = st.text_input("Destination")
+            start_date = st.date_input("Departure")
+            end_date = st.date_input("Return")
+            start_time = st.time_input("Start Time")
+            end_time = st.time_input("End Time")
+            start_time_str = start_time.strftime("%H:%M")
+            end_time_str = end_time.strftime("%H:%M")
+            occasion = st.text_input("Occasion")
+            manager_ID = int(st.session_state["user_ID"])
+
+            # predictions based on ML
+            duration_days = 0
+            try:
+                duration_days = (end_date - start_date).days + 1
+                if duration_days < 1:
+                    duration_days = 0
+            except Exception:
+                duration_days = 0
+
+            distance_km = None
+            if origin and destination:
+                o = get_city_coords(origin)
+                d = get_city_coords(destination)
+                if o and d:
+                    distance_km = geodesic(o, d).km
+
+            predicted_cost = None
+            if distance_km is not None and duration_days > 0:
+                model = load_model()
+                if model is not None:
+                    X = pd.DataFrame([{
+                        "dest_city": destination,
+                        "distance_km": distance_km,
+                        "duration_days": duration_days,
+                    }])
+                    predicted_cost = float(model.predict(X)[0])
+                    st.metric(
+                        "Estimated total trip cost (CHF)",
+                        f"{predicted_cost:,.2f}",
+                        help="Based on historical seed data and employee expense reports.",
+                    )
+                else:
+                    st.info("Prediction model not trained yet – no estimate available.")
+            else:
+                st.info("Enter origin, destination and valid dates to see a cost estimate.")
+            # end ML code
+
+            # load employees for assignment
             conn = connect()
             user_df = pd.read_sql_query("""SELECT u.user_ID, u.username FROM users u 
                                         JOIN roles r ON u.role = r.role 

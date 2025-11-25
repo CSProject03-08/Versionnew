@@ -3,6 +3,10 @@ from streamlit_option_menu import option_menu
 import datetime
 import sys
 from pathlib import Path
+from geopy.distance import geodesic
+from api.api_city_lookup import get_city_coords
+from ml.ml_model import retrain_model
+from db.expenses_user import insert_expense_for_training
 
 # Add project root to Python path
 project_root = Path(__file__).parent
@@ -322,9 +326,33 @@ if selected == "Dashboard":
                                     type="primary",
                                     use_container_width=True,
                                     key=f"save_{trip_id}",
-                                ):
-                                    # REMINDER: save expenses to your database (and save uploaded files somewhere)
-                                    st.success("Expense saved and model retrained.")
+                                )
+
+                                    # ---- 1. Compute distance between origin and destination for ML ----
+                                    origin_city = trip_dict.get("departure_location")
+                                    dest_city = trip_dict.get("destination")
+
+                                    origin_coords = get_city_coords(origin_city)
+                                    dest_coords = get_city_coords(dest_city)
+
+                                    if origin_coords and dest_coords:
+                                        distance_km = geodesic(origin_coords, dest_coords).km
+                                    else:
+                                        distance_km = 0.0  # fallback
+
+                                    # ---- 2. Insert row into ML training DB ----
+                                    insert_expense_for_training(
+                                        dest_city=dest_city,
+                                        distance_km=distance_km,
+                                        duration_days=duration_days,
+                                        total_cost=total_cost,
+                                        user_id=current_employee,
+                                    )
+
+                                    # ---- 3. Retrain ML model ----
+                                    mae = retrain_model()
+
+                                    st.success(f"Expense saved and ML model retrained. MAE: {mae}")
 
                                     # reset wizard
                                     wiz.update(
