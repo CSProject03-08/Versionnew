@@ -10,7 +10,6 @@ if "role" not in st.session_state or st.session_state["role"] != "Administrator"
     st.error("Access denied. Please log in as Administrator.")
     st.stop()
 
-st.subheader("User Overview and Management") 
 
 left, right = st.columns([4, 2], gap="large")
 with left:
