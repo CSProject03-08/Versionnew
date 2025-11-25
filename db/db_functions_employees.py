@@ -55,19 +55,11 @@ def employee_listview():
             "other_cost": 0.0, "other_files": [],
         }
     wiz = st.session_state.expense_wizard
-    today = date.today
+    today = date.today()
     
     for _, row in trip_df.iterrows():
-         # normalise dates for comparison
-        try:
-            start_date = pd.to_datetime(row.start_date).date()
-        except Exception:
-            start_date = row.start_date
-
-        try:
-            end_date = pd.to_datetime(row.end_date).date()
-        except Exception:
-            end_date = row.end_date
+        start_date = pd.to_datetime(row.start_date).date()
+        end_date = pd.to_datetime(row.end_date).date()
 
         trip_id = row.trip_ID
         is_active = wiz["active_trip_id"] == trip_id
@@ -98,14 +90,12 @@ def employee_listview():
             st.dataframe(participants, hide_index=True, use_container_width=True)
 
             # ---- expense wizard only for past trips ----
-            if isinstance(end_date, date) and end_date <= today:
+            if end_date <= today:
                 st.divider()
 
                 # duration in days (for ML)
-                if isinstance(start_date, date) and isinstance(end_date, date):
-                    duration_days = (end_date - start_date).days + 1
-                else:
-                    duration_days = 0
+                duration_days = (end_date - start_date).days + 1
+
 
                 # ---- open wizard button (if not currently editing this trip) ----
                 if not is_active:
