@@ -144,20 +144,6 @@ def create_trip_dropdown(title: str = "Create new trip"):
             occasion = st.text_input("Occasion")
             manager_ID = int(st.session_state["user_ID"])
 
-            def create_trip_dropdown(title: str = "Create new trip"):
-    with st.expander(title, expanded=False):
-        with st.form("Create a trip", clear_on_submit=True):
-            origin = st.text_input("Origin")
-            destination = st.text_input("Destination")
-            start_date = st.date_input("Departure")
-            end_date = st.date_input("Return")
-            start_time = st.time_input("Start Time")
-            end_time = st.time_input("End Time")
-            start_time_str = start_time.strftime("%H:%M")
-            end_time_str = end_time.strftime("%H:%M")
-            occasion = st.text_input("Occasion")
-            manager_ID = int(st.session_state["user_ID"])
-
             # predictions based on ML
             duration_days = 0
             try:
