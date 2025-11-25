@@ -1,7 +1,6 @@
 streamlit
 streamlit-elements
 streamlit-option-menu
-sqlite3
 pandas
 numpy
 requests
