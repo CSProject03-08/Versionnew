@@ -57,6 +57,10 @@ def employee_listview():
             "other_cost": 0.0, "other_files": [],
         }
     wiz = st.session_state.expense_wizard
+
+    if "expense_summaries" not in st.session_state:
+        st.session_state.expense_summaries = {}  # key: trip_id, value: text
+    summaries = st.session_state.expense_summaries
     
     for _, row in trip_df.iterrows():
         start_date = pd.to_datetime(row.start_date).date()
@@ -89,6 +93,10 @@ def employee_listview():
 
             st.markdown("**Participants:**")
             st.dataframe(participants, hide_index=True, use_container_width=True)
+
+            trip_msg = summaries.get(trip_id)
+            if trip_msg:
+                st.success(trip_msg)
             
             # duration in days (for ML)
             duration_days = (end_date - start_date).days + 1
@@ -305,8 +313,6 @@ def employee_listview():
                             dest_coords = get_city_coords(dest_city)
 
                             if origin_coords and dest_coords:
-                                from geopy.distance import geodesic
-
                                 distance_km = geodesic(
                                     origin_coords, dest_coords
                                 ).km
@@ -325,11 +331,22 @@ def employee_listview():
                             # ---- 3. Retrain ML model ----
                             mae = retrain_model()
 
-                            st.success(
-                                f"Expense saved and ML model retrained. MAE: {mae}"
-                            )
+                            # ---- 4. Build and store per-trip summary ----
+                            if mae is not None:
+                                msg = (
+                                    f"Expense saved for this trip. "
+                                    f"Total: CHF {total_cost:,.2f}. "
+                                    f"Model retrained (MAE: {mae:,.2f})."
+                                )
+                            else:
+                                msg = (
+                                    f"Expense saved for this trip. "
+                                    f"Total: CHF {total_cost:,.2f}."
+                                )
 
-                            # reset wizard
+                            summaries[trip_id] = msg
+
+                            # ---- 5. Reset wizard so it closes ----
                             wiz.update(
                                 active_trip_id=None,
                                 step=1,
@@ -342,4 +359,6 @@ def employee_listview():
                                 other_cost=0.0,
                                 other_files=[],
                             )
+
+                            # ---- 6. Rerun so expander shows summary instead of wizard ----
                             st.rerun()
