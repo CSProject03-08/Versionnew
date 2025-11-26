@@ -129,23 +129,43 @@ def retrain_model():
 
 def load_model():
     """
-    Load the trained model from disk, or return None if it doesn't exist yet.
+    Load the trained model from disk.
+
+    - If model.pkl is missing, try to train from seed_trips.csv once.
+    - If unpickling fails (environment mismatch), try to rebuild once.
+    - If everything fails, return None so the app can show a friendly message.
     """
+    csv_path = BASE_DIR / "seed_trips.csv"
+
+    def _train_from_seed_if_possible():
+        if csv_path.exists():
+            try:
+                print("🔁 Rebuilding ML model from seed_trips.csv...")
+                initial_train_from_csv(str(csv_path))
+            except Exception as e:
+                print(f"⚠️ Rebuild from seed_trips.csv failed: {e}")
+
+    # 1) No model.pkl yet → try to build it from seed data
+    if not MODEL_PATH.exists():
+        _train_from_seed_if_possible()
+
+    # Still no model.pkl? Then we simply have no model.
     if not MODEL_PATH.exists():
         return None
-    with open(MODEL_PATH, "rb") as f:
-        return pickle.load(f)
-    
 
-if __name__ == "__main__":
-    # Find seed_trips.csv in the same folder as this file
-    here = Path(__file__).resolve().parent
-    csv_path = here / "seed_trips.csv"
-
+    # 2) Try to load existing model.pkl
     try:
-        mae = initial_train_from_csv(csv_path)
-        print("✅ Model trained successfully.")
-        print("MAE:", mae)
-    except FileNotFoundError:
-        print(f"❌ Could not find seed_trips.csv at {csv_path}. Run your generator or fix the path.")
-        raise
+        with open(MODEL_PATH, "rb") as f:
+            return pickle.load(f)
+    except Exception as e:
+        # Most likely: incompatible pickle from a different environment
+        print(f"⚠️ Could not load model.pkl ({e}). Trying to rebuild from seed.")
+        _train_from_seed_if_possible()
+
+        # Try one more time after rebuilding
+        try:
+            with open(MODEL_PATH, "rb") as f:
+                return pickle.load(f)
+        except Exception as e2:
+            print(f"❌ Failed to load model.pkl even after rebuild: {e2}")
+            return None
