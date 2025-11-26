@@ -236,7 +236,6 @@ def trip_list_view():
             st.markdown("**Participants:**")
             st.dataframe(participants, hide_index=True, use_container_width=True)
 
-                        # ---------- ML cost prediction ----------
             model = load_model()
             if model is not None:
                 # duration in days
