@@ -3,6 +3,9 @@ import time
 import streamlit as st
 import pandas as pd
 from datetime import date
+from api.api_city_lookup import get_city_coords
+from geopy.distance import geodesic
+from ml.ml_model import load_model
 import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_DIR = os.path.join(BASE_DIR, "db")
@@ -232,6 +235,48 @@ def trip_list_view():
 
             st.markdown("**Participants:**")
             st.dataframe(participants, hide_index=True, use_container_width=True)
+
+                        # ---------- ML cost prediction ----------
+            model = load_model()
+            if model is not None:
+                # duration in days
+                try:
+                    start_date_obj = pd.to_datetime(row.start_date).date()
+                    end_date_obj = pd.to_datetime(row.end_date).date()
+                    duration_days = (end_date_obj - start_date_obj).days + 1
+                except Exception:
+                    duration_days = 0
+
+                # distance in km based on origin/destination
+                origin_coords = get_city_coords(row.origin)
+                dest_coords = get_city_coords(row.destination)
+
+                if origin_coords and dest_coords:
+                    distance_km = geodesic(origin_coords, dest_coords).km
+                else:
+                    distance_km = 0.0
+
+                # build one-row dataframe for the model
+                X_pred = pd.DataFrame([{
+                    "dest_city": row.destination,
+                    "distance_km": distance_km,
+                    "duration_days": duration_days,
+                }])
+
+                try:
+                    predicted_total = float(model.predict(X_pred)[0])
+                    st.metric(
+                        "Predicted total trip cost (CHF)",
+                        f"{predicted_total:,.2f}"
+                    )
+                except Exception as e:
+                    st.warning(f"Could not compute ML prediction: {e}")
+            else:
+                st.info(
+                    "No ML model trained yet. "
+                    "Once employees submit expense reports, "
+                    "the model will be able to predict costs."
+                )
 
             #edit occasion
             with st.form(f"edit_trip_{row.trip_ID}"):
