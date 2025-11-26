@@ -10,10 +10,11 @@ from sklearn.linear_model import LinearRegression  # multiple linear regression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
 
-DB_PATH = "expenses_user_data.db"   # SQLite DB where user-submitted and seed data is stored
-MODEL_PATH = "model.pkl"            # pickle file for model
-TABLE_NAME = "expenses_user_data"   # keep it consistent everywhere
+BASE_DIR = Path(__file__).resolve().parent
 
+DB_PATH = BASE_DIR / "expenses_user_data.db"
+MODEL_PATH = BASE_DIR / "model.pkl"
+TABLE_NAME = "expenses_user_data"
 
 def _make_pipeline():
     """
@@ -130,7 +131,7 @@ def load_model():
     """
     Load the trained model from disk, or return None if it doesn't exist yet.
     """
-    if not Path(MODEL_PATH).exists():
+    if not MODEL_PATH.exists():
         return None
     with open(MODEL_PATH, "rb") as f:
         return pickle.load(f)
