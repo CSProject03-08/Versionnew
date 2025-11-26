@@ -7,7 +7,7 @@ from db.db_functions_users import edit_own_profile
 from db.db_functions_employees import employee_listview
 
 DB_PATH = "db/users.db"
-API_KEY = "ttps://api.worldnewsapi.com/top-news?source-country=ch" 
+API_KEY = "https://api.worldnewsapi.com/top-news?source-country=ch" 
 
 # Swiss News Carousel Widget #
 def get_swiss_news_english():
@@ -88,4 +88,5 @@ with right:
     # Embed Swiss news carousel below the profile editor #
     st.subheader("🇨🇭 Swiss News (English)")
     news_widget_container = st.container()
+
     swiss_news_carousel_widget(news_widget_container)
