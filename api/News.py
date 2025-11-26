@@ -5,8 +5,12 @@ import requests
 from datetime import date
 from db.db_functions_users import edit_own_profile
 from db.db_functions_employees import employee_listview
+import os
 
-DB_PATH = "db/users.db"
+DB_PATH = os.path.join(os.path.dirname(__file__), "db", "users.db")
+# Make sure the folder exists #
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
 API_KEY = "https://api.worldnewsapi.com/top-news?source-country=ch" 
 
 # Swiss News Carousel Widget #
@@ -90,3 +94,4 @@ with right:
     news_widget_container = st.container()
 
     swiss_news_carousel_widget(news_widget_container)
+
