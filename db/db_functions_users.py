@@ -3,6 +3,7 @@ import time
 import streamlit as st
 import pandas as pd
 import os
+import bcrypt
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_DIR = os.path.join(BASE_DIR, "db")
 os.makedirs(DB_DIR, exist_ok=True)
@@ -71,13 +72,14 @@ def get_manager_ID(username: str):
 
 ### Adding users ###
 def add_user(username, password, email, role):
+    hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
     conn = connect()
     c = conn.cursor()
     manager_ID = st.session_state.get("user_ID", None)
     try:
         c.execute(
             "INSERT INTO users (username, password, email, role, manager_ID) VALUES (?, ?, ?, ?, ?)",
-            (username, password, email, role, manager_ID)
+            (username, hashed_pw, email, role, manager_ID)
         )
         conn.commit()
         print(f"✅ User '{username}' sucessfully added!")
@@ -88,11 +90,12 @@ def add_user(username, password, email, role):
 
 ### Comparison from inputs to databank ###
 def get_user_by_credentials(username, password):
+    hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
     conn = connect()
     c = conn.cursor()
     c.execute(
         "SELECT username, role FROM users WHERE username = ? AND password = ?",
-        (username, password)
+        (username, hashed_pw)
     )
     user = c.fetchone()
     conn.close()
