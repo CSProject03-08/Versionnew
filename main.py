@@ -10,11 +10,9 @@ st.title("Login")
 ### create db and table if non-existent ###
 create_tables()
 ### add dummies to user.db ###
-password = "123"
-hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-add_user("Admin", hashed_pw, "a@gmail.com", "Administrator")
-add_user("Manager", hashed_pw, "manager@gmail.com", "Manager")
-add_user("User", hashed_pw, "user@gmail.com", "User")
+add_user("Admin", "123", "a@gmail.com", "Administrator")
+add_user("Manager", "123", "manager@gmail.com", "Manager")
+add_user("User", "123", "user@gmail.com", "User")
 
 ### Login-inputs, with censored password ###
 with st.form("login_form"):
