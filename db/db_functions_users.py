@@ -4,6 +4,8 @@ import streamlit as st
 import pandas as pd
 import os
 import bcrypt
+import logging
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_DIR = os.path.join(BASE_DIR, "db")
 os.makedirs(DB_DIR, exist_ok=True)
@@ -91,6 +93,9 @@ def add_user(username, password, email, role):
 ### Comparison from inputs to databank ###
 def get_user_by_credentials(username, password):
     hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    # debuging with logging
+    logging.info("password = {password}")
+    logging.info("hashed_pw = {hashed_pw}")
     conn = connect()
     c = conn.cursor()
     c.execute(
