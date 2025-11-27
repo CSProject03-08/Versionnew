@@ -4,7 +4,6 @@ import streamlit as st
 import pandas as pd
 import os
 import bcrypt
-import logging
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_DIR = os.path.join(BASE_DIR, "db")
@@ -50,6 +49,15 @@ def create_tables():
     conn.commit()
     conn.close()
 
+def get_user(username):
+    conn = connect()
+    c = conn.cursor()
+    c.execute('SELECT * FROM users WHERE username = ?', (username,))
+    data = c.fetchone()
+    conn.close()
+    return data
+
+
 ### we use user_ID of the manager, to add their user_ID to the users they create with another column manager_id, so manager only have access to these users, they've created ###
 def get_user_ID(username: str):
     conn = connect()
@@ -91,11 +99,9 @@ def add_user(username, password, email, role):
         conn.close()
 
 ### Comparison from inputs to databank ###
-def get_user_by_credentials(username, password):
+def get_user_by_credentials_old(username, password):
     hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-    # debuging with logging
-    logging.info("password = {password}")
-    logging.info("hashed_pw = {hashed_pw}")
+    st.error(f"get_user_by_credentials(): username[{username}], password[{password}] and hashed-password[{hashed_pw}].")
     conn = connect()
     c = conn.cursor()
     c.execute(
@@ -105,6 +111,27 @@ def get_user_by_credentials(username, password):
     user = c.fetchone()
     conn.close()
     return user
+
+def get_user_by_credentials(username, password):
+    conn = connect()
+    c = conn.cursor()
+    c.execute(
+        "SELECT username, password, role FROM users WHERE username = ?",
+        (username,)
+    )
+    row = c.fetchone()
+    conn.close()
+
+    if row is None:
+        return None
+
+    stored_username, stored_hash, stored_role = row
+    # Passwortprüfung: hier NICHT neu hashen!
+    if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
+        return (stored_username, stored_role)
+    else:
+        return None
+
 
 ### Assign sortkey to roles for user management ###
 def get_role_sortkey(role):
@@ -489,14 +516,17 @@ def register_main(title: str = "Register as manager"):
             role = "Manager"
 
             try:
+                add_user(username, password, email, role)
+
                 conn = sqlite3.connect(DB_PATH)
                 c = conn.cursor()
 
-                c.execute(
-                    "INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, ?)",
-                    (username, password, email, role)
-                )
-                conn.commit()
+    			#hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+                #c.execute(
+                #    "INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, ?)",
+                #    (username, hashed_pw, email, role)
+                #)
+                #conn.commit()
 
                 c.execute("SELECT user_ID FROM users WHERE username = ?", (username,))
                 new_user_id = c.fetchone()[0]
