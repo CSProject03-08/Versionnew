@@ -94,7 +94,7 @@ def employee_listview():
 
             st.markdown("**Participants:**")
             st.dataframe(participants, hide_index=True, use_container_width=True)
-
+"""
             trip_msg = summaries.get(trip_id)
             if trip_msg:
                 st.success(trip_msg)
@@ -363,7 +363,7 @@ def employee_listview():
 
                             # ---- 6. Rerun so expander shows summary instead of wizard ----
                             st.rerun()
-
+"""
 def past_trip_view_employee():
 
     st.subheader("Past trips")
