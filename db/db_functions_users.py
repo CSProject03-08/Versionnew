@@ -589,7 +589,7 @@ def edit_own_profile(title: str = "My profile"):
         new_username = st.text_input("Username", value=username, disabled = True)
         new_email    = st.text_input("E-Mail", value=email or "")
 
-        st.markdown("**Passwort ändern (optional)**")
+        st.markdown("**Change password (optional)**")
         pw1 = st.text_input("New password", type="password", placeholder="leave empty to keep current password")
         pw2 = st.text_input("Confirm new password", type="password")
 
