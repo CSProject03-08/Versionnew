@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import date
 from db.db_functions_users import edit_own_profile
-from db.db_functions_employees import employee_listview
+from db.db_functions_employees import employee_listview, past_trip_view_employee
 DB_PATH = "db/users.db"
 
 
@@ -19,6 +19,7 @@ left, right = st.columns([4, 2], gap="large")
 with left:
     st.subheader("Trip-Overview")
     employee_listview()
+    past_trip_view_employee()
 
 
 with right:
