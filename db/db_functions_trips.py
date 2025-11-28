@@ -7,10 +7,8 @@ from api.api_city_lookup import get_city_coords
 from geopy.distance import geodesic
 from ml.ml_model import load_model
 import os
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_DIR = os.path.join(BASE_DIR, "db")
-os.makedirs(DB_DIR, exist_ok=True)
-DB_PATH = os.path.join(DB_DIR, "users.db")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))   # .../db
+DB_PATH  = os.path.join(BASE_DIR, "users.db")  
 
 ### Connecting to the database trips.db ###
 def connect():
