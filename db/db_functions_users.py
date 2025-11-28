@@ -112,7 +112,7 @@ def get_user_by_credentials_old(username, password):
     conn.close()
     return user
 
-def get_user_by_credentials1(username, password):
+#def get_user_by_credentials1(username, password):
     conn = connect()
     c = conn.cursor()
     c.execute(
