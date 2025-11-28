@@ -8,7 +8,7 @@ st.set_page_config(page_title="Login", layout="centered", initial_sidebar_state=
 st.title("Login")
 
 ### create db and table if non-existent ###
-#reset_users_db()  # only for testing purposes, comment out in production
+reset_users_db()  # only for testing purposes, comment out in production
 create_tables()
 ### add dummies to user.db ###
 add_user("Admin", "123", "a@gmail.com", "Administrator")
