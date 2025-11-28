@@ -113,7 +113,6 @@ def get_user_by_credentials_old(username, password):
     return user
 
 def get_user_by_credentials(username, password):
-    st.error("Wrong username{username} or password{password} and hashpw.")
     conn = connect()
     c = conn.cursor()
     c.execute(
@@ -127,7 +126,7 @@ def get_user_by_credentials(username, password):
         return None
 
     stored_username, stored_hash, stored_role = row
-    # check password
+    # Passwortprüfung: hier NICHT neu hashen!
     if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
         return (stored_username, stored_role)
     else:
