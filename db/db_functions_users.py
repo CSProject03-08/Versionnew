@@ -103,7 +103,7 @@ def add_user(username, password, email, role):
     finally:
         conn.close()
 
-### Comparison from inputs to databank ###
+### Comparison from inputs to databank, old is without bcyrypt as backup here ###
 def get_user_by_credentials_old(username, password):
     hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
     st.error(f"get_user_by_credentials(): username[{username}], password[{password}] and hashed-password[{hashed_pw}].")
@@ -116,26 +116,6 @@ def get_user_by_credentials_old(username, password):
     user = c.fetchone()
     conn.close()
     return user
-
-#def get_user_by_credentials1(username, password):
-    conn = connect()
-    c = conn.cursor()
-    c.execute(
-        "SELECT username, password, role FROM users WHERE username = ?",
-        (username,)
-    )
-    row = c.fetchone()
-    conn.close()
-
-    if row is None:
-        return None
-
-    stored_username, stored_hash, stored_role = row
-    # Passwortprüfung: hier NICHT neu hashen!
-    if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
-        return (stored_username, stored_role)
-    else:
-        return None
 
 def get_user_by_credentials(username, password):
     conn = connect()
@@ -437,13 +417,14 @@ def edit_user_dropdown(title: str = "Edit user"):
             submitted = st.form_submit_button("Save changes")
 
         if submitted:
+            hashed_pw = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
             c.execute("""
                 UPDATE users
                 SET username = ?, password = ?, email = ?, role = ?
                 WHERE username = ?
-            """, (new_username, new_password, new_email, new_role, username))
+            """, (new_username, hashed_pw, new_email, new_role, username))
             conn.commit()
             conn.close()
 
@@ -510,6 +491,7 @@ def edit_user_dropdown_admin(title: str = "Edit user"):
             submitted = st.form_submit_button("Save changes")
 
         if submitted:
+            hashed_pw = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
             conn = sqlite3.connect(DB_PATH)
             c = conn.cursor()
 
@@ -518,7 +500,7 @@ def edit_user_dropdown_admin(title: str = "Edit user"):
                 SET username = ?, password = ?, email = ?, role = ?, manager_ID = ?
                 WHERE username = ?
             """, (
-                new_username, new_password, new_email,
+                new_username, hashed_pw, new_email,
                 new_role, new_manager_ID, username
             ))
 
@@ -559,12 +541,7 @@ def register_main(title: str = "Register as manager"):
                 conn = sqlite3.connect(DB_PATH)
                 c = conn.cursor()
 
-    			#hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-                #c.execute(
-                #    "INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, ?)",
-                #    (username, hashed_pw, email, role)
-                #)
-                #conn.commit()
+
 
                 c.execute("SELECT user_ID FROM users WHERE username = ?", (username,))
                 new_user_id = c.fetchone()[0]
@@ -630,13 +607,13 @@ def edit_own_profile(title: str = "My profile"):
         new_password = pw1
     else:
         new_password = stored_pw 
-
+    hashed_pw = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())    
     try:
         c.execute("""
             UPDATE users
                SET username = ?, email = ?, password = ?
              WHERE username = ?
-        """, (new_username, new_email, new_password, username))
+        """, (new_username, new_email, hashed_pw, username))
         conn.commit()
     except sqlite3.IntegrityError:
         conn.close()
