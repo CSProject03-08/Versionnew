@@ -16,6 +16,8 @@ DB_PATH = os.path.join(DB_DIR, "users.db")
 def connect():
     return sqlite3.connect(DB_PATH)
 
+
+### Creating necessary tables for trips ###
 def create_trip_table():
     conn = connect()
     conn.execute("PRAGMA foreign_keys = ON;")
