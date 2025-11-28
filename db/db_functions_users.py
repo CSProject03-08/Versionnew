@@ -112,7 +112,7 @@ def get_user_by_credentials_old(username, password):
     conn.close()
     return user
 
-def get_user_by_credentials(username, password):
+def get_user_by_credentials1(username, password):
     conn = connect()
     c = conn.cursor()
     c.execute(
@@ -132,6 +132,39 @@ def get_user_by_credentials(username, password):
     else:
         return None
 
+def get_user_by_credentials(username, password):
+    conn = connect()
+    c = conn.cursor()
+    c.execute(
+        "SELECT username, password, role FROM users WHERE username = ?",
+        (username,)
+    )
+    row = c.fetchone()
+    conn.close()
+
+    if row is None:
+        return None
+
+    stored_username, stored_hash, stored_role = row
+
+    # --- DEBUG nur vorübergehend ---
+    st.write("DEBUG type(stored_hash):", type(stored_hash).__name__)
+    st.write("DEBUG repr(stored_hash):", repr(stored_hash))
+    # -------------------------------
+
+    # Sicherheitsnetz: wenn es kein bytes ist, konvertieren
+    if isinstance(stored_hash, str):
+        try:
+            stored_hash = stored_hash.encode("utf-8")
+        except Exception:
+            return None
+    if stored_hash is None:
+        return None
+
+    if bcrypt.checkpw(password.encode("utf-8"), stored_hash):
+        return (stored_username, stored_role)
+    else:
+        return None
 
 ### Assign sortkey to roles for user management ###
 def get_role_sortkey(role):
