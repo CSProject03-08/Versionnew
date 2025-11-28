@@ -418,18 +418,14 @@ def past_trip_list_view():
             st.rerun()
 
 def del_trip_forever():
-    
-    try:  
-        conn = connect()
-        conn.execute("PRAGMA foreign_keys = ON;")
-        c = conn.cursor()
-        manager_ID = int(st.session_state["user_ID"])
-        c.execute("""DELETE FROM trips
-            WHERE manager_id = ?
-            AND (julianday(?) - julianday(end_date)) > 365 
-        """, (manager_ID, date.today()))
-        conn.commit()
-        conn.close()
-
-    except:
-        pass
+         
+    conn = connect()
+    conn.execute("PRAGMA foreign_keys = ON;")
+    c = conn.cursor()
+    manager_ID = int(st.session_state["user_ID"])
+    c.execute("""DELETE FROM trips
+        WHERE manager_id = ?
+        AND (julianday(?) - julianday(end_date)) > 365 
+    """, (manager_ID, date.today()))
+    conn.commit()
+    conn.close()
