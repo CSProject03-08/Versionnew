@@ -26,4 +26,4 @@ with left:
     st.subheader("Trip-Overview")
     trip_list_view()
     past_trip_list_view()
-    del_trip_forever()
+    #del_trip_forever()
