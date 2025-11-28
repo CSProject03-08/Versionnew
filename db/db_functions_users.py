@@ -5,15 +5,20 @@ import pandas as pd
 import os
 import bcrypt
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_DIR = os.path.join(BASE_DIR, "db")
-os.makedirs(DB_DIR, exist_ok=True)
-DB_PATH = os.path.join(DB_DIR, "users.db")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))   # .../db
+DB_PATH  = os.path.join(BASE_DIR, "users.db")           # .../db/users.db
 ### Connecting to the database users.db ###
 def connect():
     return sqlite3.connect(DB_PATH)
 
 ### Creating necessary tables for different role in main.py ###
+def reset_users_db():
+    """Löscht die users.db am definierten DB_PATH (nur für einmaligen Reset verwenden)."""
+    if os.path.exists(DB_PATH):
+        os.remove(DB_PATH)
+        print(f"[RESET] users.db am Pfad {DB_PATH} wurde gelöscht.")
+    else:
+        print(f"[RESET] Keine users.db am Pfad {DB_PATH} gefunden.")
 def create_tables():
     conn = connect()
     c = conn.cursor()

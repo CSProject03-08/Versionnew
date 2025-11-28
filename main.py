@@ -1,6 +1,6 @@
 import streamlit as st
 import time
-from db.db_functions_users import create_tables, add_user, get_user_by_credentials, get_role_sortkey, register_main, get_user_ID, get_manager_ID
+from db.db_functions_users import create_tables, add_user, get_user_by_credentials, get_role_sortkey, register_main, get_user_ID, get_manager_ID, reset_users_db
 import bcrypt
 
 ### basic page settings ###
@@ -8,6 +8,7 @@ st.set_page_config(page_title="Login", layout="centered", initial_sidebar_state=
 st.title("Login")
 
 ### create db and table if non-existent ###
+reset_users_db()  # Nur zum Zurücksetzen der Datenbank während der Entwicklung verwenden
 create_tables()
 ### add dummies to user.db ###
 add_user("Admin", "123", "a@gmail.com", "Administrator")
