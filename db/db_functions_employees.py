@@ -8,10 +8,8 @@ from db.expenses_user import insert_expense_for_training
 from datetime import date
 from geopy.distance import geodesic
 import os
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_DIR = os.path.join(BASE_DIR, "db")
-os.makedirs(DB_DIR, exist_ok=True)
-DB_PATH = os.path.join(DB_DIR, "users.db")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))   # .../db
+DB_PATH  = os.path.join(BASE_DIR, "users.db")  
 
 ### Connecting to the database trips.db ###
 def connect():
