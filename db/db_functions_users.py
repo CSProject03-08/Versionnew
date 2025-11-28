@@ -106,7 +106,6 @@ def add_user(username, password, email, role):
 ### Comparison from inputs to databank, old is without bcyrypt as backup here ###
 def get_user_by_credentials_old(username, password):
     hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-    st.error(f"get_user_by_credentials(): username[{username}], password[{password}] and hashed-password[{hashed_pw}].")
     conn = connect()
     c = conn.cursor()
     c.execute(
