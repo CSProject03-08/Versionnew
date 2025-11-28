@@ -411,7 +411,7 @@ def edit_user_dropdown(title: str = "Edit user"):
                 new_username = st.text_input("Username", value=username)
                 new_email = st.text_input("E-Mail", value=email)
             with col2:
-                new_password = st.text_input("Password", value=password, type="password")
+                new_password = st.text_input("Password")
                 new_role = st.text_input("Role", value=role)  
 
             submitted = st.form_submit_button("Save changes")
