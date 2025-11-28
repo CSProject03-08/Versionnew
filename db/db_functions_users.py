@@ -131,12 +131,7 @@ def get_user_by_credentials(username, password):
 
     stored_username, stored_hash, stored_role = row
 
-    # --- DEBUG nur vorübergehend ---
-    st.write("DEBUG type(stored_hash):", type(stored_hash).__name__)
-    st.write("DEBUG repr(stored_hash):", repr(stored_hash))
-    # -------------------------------
-
-    # Sicherheitsnetz: wenn es kein bytes ist, konvertieren
+    # safety check: ensure stored_hash is bytes
     if isinstance(stored_hash, str):
         try:
             stored_hash = stored_hash.encode("utf-8")
