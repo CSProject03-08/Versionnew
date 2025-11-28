@@ -67,7 +67,7 @@ def create_manager_trip_table():
     c.execute("""
     CREATE TABLE IF NOT EXISTS manager_trips (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        manager_ID INTEGER NOT NULL
+                        manager_ID INTEGER NOT NULL,
                         trip_ID NOT NULL
                         UNIQUE (manager_ID, trip_ID),
                         FOREIGN KEY(manager_ID) REFERENCES users(manager_ID) ON DELETE CASCADE,
@@ -241,46 +241,46 @@ def trip_list_view():
             st.markdown("**Participants:**")
             st.dataframe(participants, hide_index=True, use_container_width=True)
 
-            model = load_model()
-            if model is not None:
-                # duration in days
-                try:
-                    start_date_obj = pd.to_datetime(row.start_date).date()
-                    end_date_obj = pd.to_datetime(row.end_date).date()
-                    duration_days = (end_date_obj - start_date_obj).days + 1
-                except Exception:
-                    duration_days = 0
-
-                # distance in km based on origin/destination
-                origin_coords = get_city_coords(row.origin)
-                dest_coords = get_city_coords(row.destination)
-
-                if origin_coords and dest_coords:
-                    distance_km = geodesic(origin_coords, dest_coords).km
-                else:
-                    distance_km = 0.0
-
+#            model = load_model()
+ #           if model is not None:
+  #              # duration in days
+   #             try:
+    #                start_date_obj = pd.to_datetime(row.start_date).date()
+     #               end_date_obj = pd.to_datetime(row.end_date).date()
+      #              duration_days = (end_date_obj - start_date_obj).days + 1
+       #         except Exception:
+        #            duration_days = 0
+#
+ #               # distance in km based on origin/destination
+  #              origin_coords = get_city_coords(row.origin)
+   #             dest_coords = get_city_coords(row.destination)
+#
+ #               if origin_coords and dest_coords:
+  #                  distance_km = geodesic(origin_coords, dest_coords).km
+   #             else:
+    #                distance_km = 0.0
+#
                 # build one-row dataframe for the model
-                X_pred = pd.DataFrame([{
-                    "dest_city": row.destination,
-                    "distance_km": distance_km,
-                    "duration_days": duration_days,
-                }])
+ #               X_pred = pd.DataFrame([{
+  #                  "dest_city": row.destination,
+   #                 "distance_km": distance_km,
+    #                "duration_days": duration_days,
+     #           }])
 
-                try:
-                    predicted_total = float(model.predict(X_pred)[0])
-                    st.metric(
-                        "Predicted total trip cost (CHF)",
-                        f"{predicted_total:,.2f}"
-                    )
-                except Exception as e:
-                    st.warning(f"Could not compute ML prediction: {e}")
-            else:
-                st.info(
-                    "No ML model trained yet. "
-                    "Once employees submit expense reports, "
-                    "the model will be able to predict costs."
-                )
+      #          try:
+       #             predicted_total = float(model.predict(X_pred)[0])
+        #            st.metric(
+         #               "Predicted total trip cost (CHF)",
+          #              f"{predicted_total:,.2f}"
+           #         )
+            #    except Exception as e:
+             #       st.warning(f"Could not compute ML prediction: {e}")
+#            else:
+ #               st.info(
+  #                  "No ML model trained yet. "
+   #                 "Once employees submit expense reports, "
+    #                "the model will be able to predict costs."
+     #           )
 
             #edit occasion
             with st.form(f"edit_trip_{row.trip_ID}"):
