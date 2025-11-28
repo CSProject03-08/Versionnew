@@ -30,7 +30,9 @@ def create_trip_table():
                         start_time TEXT,
                         end_time TEXT, 
                         occasion TEXT,
-                        manager_ID INTEGER
+                        manager_ID INTEGER,
+                        show_trip_m INTEGER NOT NULL DEFAULT 1,
+                        show_trip_e INTEGER NOT NULL DEFAULT 1
     )
     """)
     conn.commit()
@@ -201,6 +203,7 @@ def trip_list_view():
         FROM trips
         WHERE manager_ID = ?
         AND ? <= end_date
+        AND show_trip_m = 1
         ORDER BY start_date
     """, conn, params=(manager_ID, date.today()))
     conn.close()
@@ -359,6 +362,7 @@ def past_trip_list_view():
         FROM trips
         WHERE manager_ID = ?
         AND ? > end_date
+        AND show_trip_m = 1
         ORDER BY start_date
     """, conn, params=(manager_ID, date.today()))
     conn.close()
@@ -394,19 +398,32 @@ def past_trip_list_view():
             st.markdown("**Participants:**")
             st.dataframe(participants, hide_index=True, use_container_width=True)
 
-    with st.form("Delete past trips"):
-        deleted = st.form_submit_button("Delete past trips")
+    with st.form("Archive past trips"):
+        archived = st.form_submit_button("Archive past trips")
 
-        if deleted:
+        if archived:
             conn = connect()
             c = conn.cursor()
             manager_ID = int(st.session_state["user_ID"])
-            c.execute("""DELETE FROM trips 
+            c.execute("""UPDATE trips SET show_trip_m = 0
                 WHERE manager_id = ?
                 AND ? > end_date
             """, (manager_ID, date.today()))
             conn.commit()
             conn.close()
-            st.success("Deleted past trips!")
+            st.success("Archived past trips!")
             time.sleep(0.5)
             st.rerun()
+
+def del_trip_forever():
+      
+    conn = connect()
+    conn.execute("PRAGMA foreign_keys = ON;")
+    c = conn.cursor()
+    manager_ID = int(st.session_state["user_ID"])
+    c.execute("""DELETE FROM trips
+        WHERE manager_id = ?
+        AND (julianday(?) - julianday(end_date)) > 365 
+    """, (manager_ID, date.today()))
+    conn.commit()
+    conn.close()
