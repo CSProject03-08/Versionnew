@@ -485,7 +485,7 @@ def edit_user_dropdown_admin(title: str = "Edit user"):
                 new_email      = st.text_input("E-Mail", value=email)
                 new_manager_ID = st.text_input("Manager ID", value=str(manager_ID))
             with col2:
-                new_password = st.text_input("Password", value=password, type="password")
+                new_password = st.text_input("Password")
                 new_role     = st.text_input("Role", value=role)
 
             submitted = st.form_submit_button("Save changes")
@@ -590,8 +590,8 @@ def edit_own_profile(title: str = "My profile"):
         new_email    = st.text_input("E-Mail", value=email or "")
 
         st.markdown("**Passwort ändern (optional)**")
-        pw1 = st.text_input("Neues Passwort", type="password", placeholder="Leer lassen, um altes zu behalten")
-        pw2 = st.text_input("Neues Passwort bestätigen", type="password")
+        pw1 = st.text_input("New password", type="password", placeholder="leave empty to keep current password")
+        pw2 = st.text_input("Confirm new password", type="password")
 
         submitted = st.form_submit_button("Safe changes")
 
@@ -626,6 +626,7 @@ def edit_own_profile(title: str = "My profile"):
         st.session_state["username"] = new_username
 
     st.success("Profile has been updated")
+    time.sleep(2)
     st.rerun()
 
 ### Creates table for admin dashboard to see all registered managers/users ###
