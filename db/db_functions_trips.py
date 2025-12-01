@@ -239,8 +239,10 @@ def trip_list_view():
             st.markdown("**Participants:**")
             st.dataframe(participants, hide_index=True, use_container_width=True)
 
+            num_participants = len(participants)
+
             model = load_model()
-            if model is not None:
+            if model is not None and num_participants > 0:
                 # duration in days
                 try:
                     start_date_obj = pd.to_datetime(row.start_date).date()
@@ -266,10 +268,14 @@ def trip_list_view():
                 }])
 
                 try:
-                    predicted_total = float(model.predict(X_pred)[0])
+                    per_employee_cost = float(model.predict(X_pred)[0])
+                    predicted_total = per_employee_cost * num_participants
                     st.metric(
-                        "Predicted total trip cost (CHF)",
+                        "Predicted total trip cost for all participants (CHF)",
                         f"{predicted_total:,.2f}"
+                    )
+                    st.caption(
+                        f"Approx. {per_employee_cost:,.2f} CHF per person."
                     )
                 except Exception as e:
                     st.warning(f"Could not compute ML prediction: {e}")
