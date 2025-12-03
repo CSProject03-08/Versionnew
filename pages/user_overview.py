@@ -1,3 +1,5 @@
+import sys
+from pathlib import Path
 import streamlit as st
 import pandas as pd
 from datetime import date
@@ -27,4 +29,4 @@ with left:
 with right:
     edit_own_profile()
     st.subheader("Weather Forecast for Your Trips")
-    weather_widget()
+    weather_widget(st.session_state.get("username"))
