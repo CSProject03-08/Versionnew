@@ -7,6 +7,7 @@ from ml.ml_model import retrain_model
 from db.expenses_user import insert_expense_for_training
 from datetime import date
 from geopy.distance import geodesic
+from api.weather import weather_widget
 import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))   # .../db
 DB_PATH  = os.path.join(BASE_DIR, "users.db")  
@@ -93,6 +94,9 @@ def employee_listview():
 
             st.markdown("**Participants:**")
             st.dataframe(participants, hide_index=True, use_container_width=True)
+
+            st.subheader("Weather Forecast for your trips")
+            weather_widget(st.session_state["user_ID"])
 
 def past_trip_view_employee():
     """
