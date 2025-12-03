@@ -1,22 +1,29 @@
+import sqlite3
 import streamlit as st
 import requests
 import pandas as pd
 import matplotlib.pyplot as plt
 import sys
 from pathlib import Path
+#import os
+BASE_DIR = Path(__file__).resolve().parent.parent / "db"   # geht aus api/ eine Ebene hoch nach Projektroot und dann in db/
+DB_PATH = BASE_DIR / "users.db"
+#BASE_DIR = os.path.dirname(os.path.abspath(__file__))   # .../db
+#DB_PATH  = os.path.join(BASE_DIR, "users.db")  
+
+### Connecting to the database users.db ###
+def connect():
+    return sqlite3.connect(DB_PATH)
 
 # --- Add Versionnew/ to Python path for imports ---
 project_root = Path(__file__).parent.parent  # Goes to Versionnew/
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-# --- Import database functions ---
-from db import db_functions_trips as db_trips
-from db import db_functions_employees as db_employees
-
 # --- Helper function to fetch upcoming trips for a user ---
-def get_upcoming_trips_for_user(user_id: int):
-    conn = db_trips.connect()
+def get_upcoming_trips_for_user():
+    user_id = int(st.session_state["user_ID"])
+    conn = connect()
     query = """
         SELECT t.trip_ID, t.origin, t.destination, t.start_date, t.end_date
         FROM trips t
@@ -25,10 +32,15 @@ def get_upcoming_trips_for_user(user_id: int):
           AND t.end_date >= DATE('now')
         ORDER BY t.start_date ASC
     """
-    rows = conn.execute(query, (user_id,)).fetchall()
-    columns = [col[0] for col in conn.execute("PRAGMA table_info(trips)").fetchall()]
+    c = conn.cursor()
+    rows = c.execute(query, (user_id,)).fetchall()
+    columns = [description[0] for description in c.description]
     conn.close()
     return [dict(zip(columns, row)) for row in rows]
+    #rows = conn.execute(query, (user_id,)).fetchall()
+    #columns = [col[0] for col in conn.execute("PRAGMA table_info(trips)").fetchall()]
+    #conn.close()
+    #return [dict(zip(columns, row)) for row in rows]
 
 # --- Main weather widget ---
 def weather_widget(username: str = None):
@@ -36,24 +48,10 @@ def weather_widget(username: str = None):
     Display upcoming trips and weather forecast for a given user.
     If username is None, uses the current logged-in user from session_state.
     """
-    # Determine user_id
-    if username:
-        # Lookup user_ID from username
-        conn = db_trips.connect()
-        user_row = conn.execute("SELECT user_ID FROM users WHERE username = ?", (username,)).fetchone()
-        conn.close()
-        if not user_row:
-            st.warning(f"Username '{username}' not found.")
-            return
-        user_id = user_row[0]
-    else:
-        user_id = st.session_state.get("user_ID")
-        if not user_id:
-            st.info("No user logged in.")
-            return
+    #user_id = int(st.session_state["user_ID"])
 
-    st.subheader("🛫 Upcoming Trips & Weather Forecast")
-    upcoming_trips = get_upcoming_trips_for_user(user_id)
+    st.subheader("Weather Forecast")
+    upcoming_trips = get_upcoming_trips_for_user()
 
     if not upcoming_trips:
         st.info("No upcoming trips found.")
