@@ -1,6 +1,6 @@
 import streamlit as st
 import time
-from db.db_functions_users import create_tables, add_user, get_user_by_credentials, get_role_sortkey, register_main, get_user_ID, get_manager_ID, reset_users_db
+from db.db_functions_users import create_tables, add_user, get_user_by_credentials, get_role_sortkey, register_main, get_user_ID, get_manager_ID
 import bcrypt
 
 ### basic page settings ###
