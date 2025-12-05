@@ -257,7 +257,7 @@ def create_trip_dropdown(title: str = "Create new trip"):
 
             api_key = st.secrets["GOOGLE_API_KEY"]
 
-            compare_clicked = st.form_submit_button("Do the comparison")
+            compare_clicked = st.button("Do the comparison")
 
             if compare_clicked and origin and destination:
                 st.session_state["transport_comparison_done"] = True
