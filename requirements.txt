@@ -13,3 +13,4 @@ pyodbc
 googlemaps
 polyline
 folium
+streamlit_folium
