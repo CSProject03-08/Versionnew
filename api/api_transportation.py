@@ -9,8 +9,8 @@ import folium
 from streamlit_folium import st_folium
 import pandas as pd
 
-#set api_key
-GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+# Globaler Client, initialisiert auf None, um ImportError zu vermeiden.
+# Die Zuweisung GOOGLE_API_KEY = st.secrets[...] wurde entfernt!
 gmaps = None
 
 # ---------- Helper ----------
@@ -20,7 +20,11 @@ def get_route(origin: str, destination: str, mode: str = "driving"):
     global gmaps
 
     if gmaps is None:
-        st.error("Google Maps client is not initialised.")
+        # Hier sollte gmaps eigentlich schon initialisiert sein,
+        # aber wir verhindern den Absturz im Helper.
+        # WICHTIG: Wenn diese Funktion direkt aufgerufen wird, ohne
+        # vorher transportation_managerview auszuführen, fehlt der Client.
+        st.error("Google Maps client is not initialised. Call transportation_managerview first.")
         return None
 
     try:
@@ -210,6 +214,7 @@ def transportation_managerview(origin: str, destination: str, api_key: str | Non
     Diese Funktion ist so gebaut, dass du sie einfach aus create_trip_dropdown()
     mit origin, destination und api_key aufrufen kannst.
     """
+    global gmaps
 
     # Validierung der Eingaben
     if not origin or not destination:
@@ -222,21 +227,21 @@ def transportation_managerview(origin: str, destination: str, api_key: str | Non
         st.info("Please enter origin and destination to see transport comparison.")
         return
 
-    # API-Key Quelle:
-    # 1. Parameter
-    # 2. st.session_state["GOOGLE_API_KEY"]
+    # API-Key Quelle (Jetzt defensiver Abruf von st.secrets)
     key = (api_key or "").strip()
     if not key:
-        key = st.session_state.get("GOOGLE_API_KEY", "").strip()
+        # st.secrets wird hier abgerufen, wo Streamlit aktiv ist
+        key = st.session_state.get("GOOGLE_API_KEY", st.secrets.get("GOOGLE_API_KEY", "")).strip()
 
     if not key:
         st.warning("Please provide a Google Maps API Key to calculate routes.")
         return
-
-    global gmaps
+    
+    # Initialisierung des Clients MUSS den lokal gefundenen Key verwenden
     if gmaps is None:
         try:
-            gmaps = googlemaps.Client(GOOGLE_API_KEY)
+            # WICHTIG: Verwenden Sie den lokal gefundenen 'key'
+            gmaps = googlemaps.Client(key=key) 
         except Exception as e:
             st.error(f"Could not initialise Google Maps client: {e}")
             return
@@ -328,24 +333,43 @@ def show_transportation_details(method_transport, origin, destination, start_dat
             start_time = datetime.strptime(start_time, "%H:%M").time()
         except:
             start_time = datetime.strptime(start_time, "%H:%M:%S").time()
-        col1, col2 = st.columns(2)
+    col1, col2 = st.columns(2)
 
     # ---------------------------------------------------------
     # ------------- OPTION 0: CAR (GOOGLE DIRECTIONS) ---------
     # ---------------------------------------------------------
     if method_transport == 0:
-        url = "https://maps.googleapis.com/maps/api/directions/json"
-        params = {
-            "origin": origin,
-            "destination": destination,
-            "mode": "driving",
-            "key": GOOGLE_API_KEY,
-        }
+        # Statt URL/requests direkt den gmaps Client verwenden (falls er global verfügbar ist)
+        # Wenn gmaps in transportation_managerview initialisiert wurde, ist es hier verfügbar.
+        # Alternativ: key neu abrufen und gmaps neu initialisieren.
+        key = st.secrets.get("GOOGLE_API_KEY", "")
+        if not key:
+            st.warning("Cannot show map: API Key missing.")
+            return
 
-        response = requests.get(url, params=params)
-        data = response.json()
+        # Sicherstellen, dass gmaps initialisiert ist
+        global gmaps
+        if gmaps is None:
+            try:
+                gmaps = googlemaps.Client(key=key)
+            except Exception as e:
+                st.error(f"Could not initialise Google Maps client for map: {e}")
+                return
+        
+        # Daten über den Client holen (besser als requests.get)
+        try:
+            directions = gmaps.directions(
+                origin,
+                destination,
+                mode="driving",
+                language="en",
+            )
+        except Exception as e:
+            st.warning(f"Could not retrieve driving route via Google Maps client: {e}")
+            return
 
-        if data.get("status") == "OK":
+        if directions and directions[0]["legs"]:
+            data = {"routes": directions} # Struktur an alten Code anpassen
             leg = data["routes"][0]["legs"][0]
 
             distance = leg["distance"]["text"]
@@ -361,7 +385,6 @@ def show_transportation_details(method_transport, origin, destination, start_dat
                 st.write(f"**Distance:** {distance}")
                 st.write(f"**Duration:** {duration}")
 
-            # ---- RIGHT COLUMN (Map) ----
             # ---- RIGHT COLUMN (Map) ----
             with col2:
                 m = folium.Map(
@@ -467,14 +490,20 @@ def show_transportation_details(method_transport, origin, destination, start_dat
                 df.index.name = "Connection"
 
                 st.dataframe(df, use_container_width=True)
+        
         # ---- RECHTE SPALTE: Karte über Google Directions (Transit) ----
         with col2:
+            key = st.secrets.get("GOOGLE_API_KEY", "")
+            if not key:
+                st.warning("Cannot show map: API Key missing.")
+                return
+
             g_url = "https://maps.googleapis.com/maps/api/directions/json"
             g_params = {
                 "origin": origin,
                 "destination": destination,
                 "mode": "transit",
-                "key": GOOGLE_API_KEY,
+                "key": key, # Verwenden des lokal abgerufenen Keys
             }
 
             g_resp = requests.get(g_url, params=g_params)
