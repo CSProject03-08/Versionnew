@@ -6,6 +6,7 @@ from datetime import date
 from api.api_city_lookup import get_city_coords
 from geopy.distance import geodesic
 from ml.ml_model import load_model
+from api.api_transportation import transportation_managerview
 
 SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
 DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
@@ -57,8 +58,9 @@ def create_trip_table():
                     occasion NVARCHAR(MAX),
                     manager_ID INT,
                     show_trip_m INT NOT NULL DEFAULT 1,
-                    show_trip_e INT NOT NULL DEFAULT 1
-                ); -- Wichtig: Semikolon am Ende des CREATE TABLE Statements.
+                    show_trip_e INT NOT NULL DEFAULT 1,
+                    method_transport INTEGER      -- 0 = Car, 1 = Public transport
+                );
             END
         """)
         conn.commit()
@@ -156,7 +158,7 @@ def get_trips_for_current_manager():
     conn.close()
     return rows
 
-def add_trip(origin, destination, start_date, end_date, start_time_str, end_time_str, occasion, manager_ID, user_ids):
+def add_trip(origin, destination, start_date, end_date, start_time_str, end_time_str, occasion, manager_ID, user_ids, method_transport:int):
     conn = connect()
     if conn is None:
         return
@@ -166,10 +168,10 @@ def add_trip(origin, destination, start_date, end_date, start_time_str, end_time
         manager_ID = int(st.session_state["user_ID"])
 
         c.execute(
-            "INSERT INTO trips (origin, destination, start_date, end_date, start_time, end_time, occasion, manager_ID) "
+            "INSERT INTO trips (origin, destination, start_date, end_date, start_time, end_time, occasion, manager_ID, method_transport) "
             "OUTPUT INSERTED.trip_ID "  # Azure mechanism to return the latest trip_ID
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (origin, destination, start_date, end_date, start_time_str, end_time_str, occasion, manager_ID)
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (origin, destination, start_date, end_date, start_time_str, end_time_str, occasion, manager_ID, method_transport)
         )
         
         if user_ids:
@@ -213,7 +215,15 @@ def del_trip(deleted_tripID: int):
 
 def create_trip_dropdown(title: str = "Create new trip"):
     with st.expander(title, expanded=False):
+
+        # ----------------------------------------------------
+        # TRIP FORM: details → users → API key → comparison → transport choice → invite
+        # ----------------------------------------------------
+        method_transport = 0  # Default: 0 = Car, 1 = Public transport
+
         with st.form("Create a trip", clear_on_submit=True):
+
+            # 1) Trip basics
             origin = st.text_input("Origin")
             destination = st.text_input("Destination")
             start_date = st.date_input("Departure")
@@ -241,15 +251,49 @@ def create_trip_dropdown(title: str = "Create new trip"):
             selected = st.multiselect("Assign users", options=options, format_func=lambda x: x[1])
             user_ids = [opt[0] for opt in selected]
 
-            submitted = st.form_submit_button("invite")
+            # 2) API-Key und Vergleich
+            st.markdown("---")
+            st.subheader("Method of Transport")
 
-        if submitted:
+            api_key = st.secrets["GOOGLE_API_KEY"]
+
+            compare_clicked = st.form_submit_button("Do the comparison")
+
+            if compare_clicked and origin and destination:
+                st.session_state["transport_comparison_done"] = True
+                transportation_managerview(origin, destination, api_key)
+            else:
+                if "transport_comparison_done" not in st.session_state:
+                    st.session_state["transport_comparison_done"] = False
+
+            comparison_ready = st.session_state.get("transport_comparison_done", False)
+            # 3) Auswahl der bevorzugten Transportmethode (zuerst ausgegraut)
+            transport_method = st.selectbox(
+                "Preferred transportation",
+                ["Car", "Public transport"],
+                disabled=not comparison_ready,
+            )
+
+            if comparison_ready:
+                method_transport = 0 if transport_method == "Car" else 1
+
+            if not comparison_ready:
+                st.caption(
+                    "🔒 Choose a transportation option after entering the API key and updating the comparison."
+                )
+
+            invite_clicked = st.form_submit_button("Invite")
+
+            # ----------------------------------------------------
+        # TRIP SPEICHERN (außerhalb des Forms, aber abhängig von invite_clicked)
+        # ----------------------------------------------------
+        if invite_clicked:
             if not destination:
                 st.error("Destination must not be empty.")
             else:
-                add_trip(origin, destination, start_date, end_date, start_time_str, end_time_str, occasion, manager_ID, user_ids)
+                add_trip(origin, destination, start_date, end_date, start_time_str, end_time_str, occasion, manager_ID, user_ids, method_transport)
                 st.success("Trip saved!")
-                time.sleep(0.5)
+                time.sleep(2)
                 st.rerun()
 
 def del_trip_dropdown(title: str = "Delete trip"):
