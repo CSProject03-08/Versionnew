@@ -285,16 +285,16 @@ def create_trip_dropdown(title: str = "Create new trip"):
             invite_clicked = st.form_submit_button("Invite")
 
             # ----------------------------------------------------
-        # TRIP SPEICHERN (außerhalb des Forms, aber abhängig von invite_clicked)
-        # ----------------------------------------------------
-        if invite_clicked:
-            if not destination:
-                st.error("Destination must not be empty.")
-            else:
-                add_trip(origin, destination, start_date, end_date, start_time_str, end_time_str, occasion, manager_ID, user_ids, method_transport)
-                st.success("Trip saved!")
-                time.sleep(2)
-                st.rerun()
+            # TRIP SPEICHERN (außerhalb des Forms, aber abhängig von invite_clicked)
+            # ----------------------------------------------------
+            if invite_clicked:
+                if not destination:
+                    st.error("Destination must not be empty.")
+                else:
+                    add_trip(origin, destination, start_date, end_date, start_time_str, end_time_str, occasion, manager_ID, user_ids, method_transport)
+                    st.success("Trip saved!")
+                    time.sleep(2)
+                    st.rerun()
 
 def del_trip_dropdown(title: str = "Delete trip"):
     with st.expander(title, expanded=False):
