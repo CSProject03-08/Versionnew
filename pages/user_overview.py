@@ -7,10 +7,6 @@ from db.db_functions_users import edit_own_profile
 from db.db_functions_employees import employee_listview, past_trip_view_employee
 from api.News import news_widget
 
-
-DB_PATH = "db/users.db"
-
-
 st.set_page_config(page_title="User Dashboard", layout="wide")
 st.title("User Dashboard")
 
@@ -29,4 +25,4 @@ with left:
 
 with right:
     edit_own_profile()
-    news_widget()
+    #news_widget()
