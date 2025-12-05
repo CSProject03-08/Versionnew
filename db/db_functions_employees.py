@@ -1,4 +1,4 @@
-import sqlite3
+import pyodbc
 import time
 import streamlit as st
 import pandas as pd
@@ -8,40 +8,78 @@ from db.expenses_user import insert_expense_for_training
 from datetime import date
 from geopy.distance import geodesic
 from api.weather import weather_widget
-import os
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))   # .../db
-DB_PATH  = os.path.join(BASE_DIR, "users.db")  
 
-### Connecting to the database trips.db ###
+SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
+DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
+USERNAME = st.secrets["azure_db"]["USERNAME"]
+PASSWORD = st.secrets["azure_db"]["PASSWORD"]
+
+CONNECTION_STRING = (
+    'DRIVER={ODBC Driver 17 for SQL Server};'
+    f'SERVER={SERVER_NAME};'
+    f'DATABASE={DATABASE_NAME};'
+    f'UID={USERNAME};'
+    f'PWD={PASSWORD};'
+    'Encrypt=yes;'  
+    'TrustServerCertificate=no;'
+)
+
 def connect():
-    return sqlite3.connect(DB_PATH)
+    """Connects to Azure SQL-database"""
+    try:
+        conn = pyodbc.connect(CONNECTION_STRING)
+        return conn
+    except pyodbc.Error as ex:
+        sqlstate = ex.args[0]
+        # show the error
+        st.error(f"Connection error: {sqlstate}")
+        return None
 
 def employee_listview():
     """
     Returns all trips assigned to a given user (employee)
     using the user_trips mapping table.
     """
+    if "user_ID" not in st.session_state:
+        st.warning("Please log in to see your trips.")
+        return
+
+    try:
+        user_id = int(st.session_state["user_ID"])
+    except ValueError:
+        st.error("Invalid User ID format in session state.")
+        return
+
     conn = connect()
-    user_id = int(st.session_state["user_ID"])
-    trip_df = pd.read_sql_query("""
-        SELECT 
-        t.trip_ID,
-        t.origin,
-        t.destination,
-        t.start_date,
-        t.end_date,
-        t.start_time,
-        t.end_time,
-        t.occasion,
-        t.show_trip_e
-        FROM trips t
-        JOIN user_trips ut ON t.trip_ID = ut.trip_ID
-        WHERE ut.user_ID = ?
-        AND ? <= t.end_date
-        AND t.show_trip_e = 1
-        ORDER BY t.start_date ASC
-        """, conn, params=(user_id, date.today()))
-    conn.close()
+    if conn is None:
+        st.error("Could not connect to the database.")
+        return
+    
+    try:
+        trip_df = pd.read_sql_query("""
+            SELECT 
+            t.trip_ID,
+            t.origin,
+            t.destination,
+            t.start_date,
+            t.end_date,
+            t.start_time,
+            t.end_time,
+            t.occasion,
+            t.show_trip_e
+            FROM trips t
+            JOIN user_trips ut ON t.trip_ID = ut.trip_ID
+            WHERE ut.user_ID = ?
+            AND ? <= t.end_date
+            AND t.show_trip_e = 1
+            ORDER BY t.start_date ASC
+            """, conn, params=(user_id, date.today()))
+    
+    except pd.io.sql.DatabaseError as e:
+        st.error(f"Error fetching trips from database: {e}")
+        return
+    finally:
+        conn.close()
 
     if trip_df.empty:
         st.info("No trips assigned yet.")
@@ -83,20 +121,25 @@ def employee_listview():
 
             #load participants into table
             conn = connect()
-            participants = pd.read_sql_query("""
-                SELECT u.username, u.email
-                FROM users u
-                JOIN user_trips ut ON ut.user_ID = u.user_ID
-                WHERE ut.trip_ID = ?
-                ORDER BY u.username
-            """, conn, params=(row.trip_ID,))
-            conn.close()
+            if conn:
+                try:
+                    participants = pd.read_sql_query("""
+                        SELECT u.username, u.email
+                        FROM users u
+                        JOIN user_trips ut ON ut.user_ID = u.user_ID
+                        WHERE ut.trip_ID = ?
+                        ORDER BY u.username
+                    """, conn, params=(row.trip_ID,))
 
-            st.markdown("**Participants:**")
-            st.dataframe(participants, hide_index=True, use_container_width=True)
+                    st.markdown("**Participants:**")
+                    st.dataframe(participants, hide_index=True, use_container_width=True)
+                except pd.io.sql.DatabaseError as e:
+                    st.error(f"Error fetching participants: {e}")
+                finally:
+                    conn.close()
 
-            st.subheader("Weather Forecast for your trips")
-            weather_widget(st.session_state["user_ID"])
+                    st.subheader("Weather Forecast for your trips")
+                    weather_widget(st.session_state["user_ID"])
 
 def past_trip_view_employee():
     """
@@ -105,27 +148,46 @@ def past_trip_view_employee():
     allows submitting an expense report via a wizard.
     """
     st.subheader("Past trips")
+
+    if "user_ID" not in st.session_state:
+        st.warning("Please log in to see your past trips.")
+        return
+
+    try:
+        user_id = int(st.session_state["user_ID"])
+    except ValueError:
+        st.error("Invalid User ID format in session state.")
+        return
+        
     conn = connect()
-    user_id = int(st.session_state["user_ID"])
-    trip_df = pd.read_sql_query("""
-        SELECT 
-        t.trip_ID,
-        t.origin,
-        t.destination,
-        t.start_date,
-        t.end_date,
-        t.start_time,
-        t.end_time,
-        t.occasion,
-        t.show_trip_e
-        FROM trips t
-        JOIN user_trips ut ON t.trip_ID = ut.trip_ID
-        WHERE ut.user_ID = ?
-        AND ? > end_date                      
-        AND t.show_trip_e = 1
-        ORDER BY t.start_date ASC
-        """, conn, params=(user_id, date.today()))
-    conn.close()
+    if conn is None:
+        st.error("Could not connect to the database.")
+        return
+    try:
+        trip_df = pd.read_sql_query("""
+            SELECT 
+            t.trip_ID,
+            t.origin,
+            t.destination,
+            t.start_date,
+            t.end_date,
+            t.start_time,
+            t.end_time,
+            t.occasion,
+            t.show_trip_e
+            FROM trips t
+            JOIN user_trips ut ON t.trip_ID = ut.trip_ID
+            WHERE ut.user_ID = ?
+            AND ? > end_date                      
+            AND t.show_trip_e = 1
+            ORDER BY t.start_date ASC
+            """, conn, params=(user_id, date.today()))
+
+    except pd.io.sql.DatabaseError as e:
+        st.error(f"Error fetching past trips from database: {e}")
+        return
+    finally:
+        conn.close()
 
     if trip_df.empty:
         st.info("No trips available.")
@@ -167,17 +229,24 @@ def past_trip_view_employee():
 
             #load participants into table
             conn = connect()
-            participants = pd.read_sql_query("""
-                SELECT u.username, u.email
-                FROM users u
-                JOIN user_trips ut ON ut.user_ID = u.user_ID
-                WHERE ut.trip_ID = ?
-                ORDER BY u.username
-            """, conn, params=(row.trip_ID,))
-            conn.close()
+            if conn:
+                try:
+                    participants = pd.read_sql_query("""
+                        SELECT u.username, u.email
+                        FROM users u
+                        JOIN user_trips ut ON ut.user_ID = u.user_ID
+                        WHERE ut.trip_ID = ?
+                        ORDER BY u.username
+                    """, conn, params=(row.trip_ID,))
+                    conn.close()
 
-            st.markdown("**Participants:**")
-            st.dataframe(participants, hide_index=True, use_container_width=True)
+                    st.markdown("**Participants:**")
+                    st.dataframe(participants, hide_index=True, use_container_width=True)
+
+                except pd.io.sql.DatabaseError as e:
+                    st.error(f"Error fetching participants: {e}")
+                finally:
+                    conn.close()
 
             trip_msg = summaries.get(trip_id)
             if trip_msg:
@@ -446,15 +515,28 @@ def past_trip_view_employee():
                             )
 
                             #archieving trips
-                            conn = connect()
-                            c = conn.cursor()
-                            c.execute("""UPDATE trips SET show_trip_e = 0
-                                WHERE manager_id = ?
-                                AND ? > end_date
-                            """, (user_id, date.today()))
-                            conn.commit()
-                            conn.close()
-                            st.success("Archived past trips!")
-                            time.sleep(0.5)
-                            # ---- 6. Rerun so expander shows summary instead of wizard ----
-                            st.rerun()
+                            try:
+                                conn = connect()
+                                c = conn.cursor()
+                                c.execute("""UPDATE trips SET show_trip_e = 0
+                                    WHERE manager_id = ?
+                                    AND ? > end_date
+                                """, (user_id, date.today()))
+                                conn.commit()
+                                st.success("Archived past trips!")
+                                time.sleep(2)
+                                # ---- 6. Rerun so expander shows summary instead of wizard ----
+                            except pyodbc.Error as e:
+                                if conn:
+                                    conn.rollback()
+                                    st.error(f"Datenbankfehler: Die Archivierung konnte nicht abgeschlossen werden. {e}")
+        
+                            except Exception as e:
+                                if conn:
+                                    conn.rollback()
+                                    st.error(f"Ein unerwarteter Fehler ist aufgetreten: {e}")
+
+                            finally:
+                                if conn:
+                                    conn.close()
+                                st.rerun()
