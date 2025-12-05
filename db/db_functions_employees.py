@@ -8,6 +8,7 @@ from db.expenses_user import insert_expense_for_training
 from datetime import date
 from geopy.distance import geodesic
 from api.weather import weather_widget
+from api.api_transportation import show_transportation_details
 
 SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
 DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
