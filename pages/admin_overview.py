@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import sqlite3
 from db.db_functions_users import register_user_dropdown_admin, del_user_dropdown, edit_user_dropdown_admin, get_users_under_me, del_user_dropdown_admin
 st.set_page_config(page_title="Admin Dashboard", layout="wide")
 st.title("Admin Dashboard")
