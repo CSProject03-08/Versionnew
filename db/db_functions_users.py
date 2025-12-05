@@ -129,15 +129,35 @@ def initialize_data():
     conn.commit()
     conn.close()
 
+#def get_user(username):
+    #conn = connect()
+    #if conn is None:
+        #return
+    #c = conn.cursor()
+    #c.execute('SELECT * FROM users WHERE username = ?', (username,))
+    #data = c.fetchone()
+    #conn.close()
+    #return data
+
 def get_user(username):
     conn = connect()
     if conn is None:
         return
-    c = conn.cursor()
-    c.execute('SELECT * FROM users WHERE username = ?', (username,))
-    data = c.fetchone()
-    conn.close()
-    return data
+    
+    try:
+        c = conn.cursor()
+        # **FEHLERBEHEBUNG: Fügen Sie TOP 1 hinzu**
+        c.execute('SELECT TOP 1 user_ID, username, password, email, role, manager_ID FROM users WHERE username = ?', (username,))
+        data = c.fetchone()
+        return data
+    
+    except pyodbc.Error as e:
+        # ZEIGT DEN 42000 ERROR, FALLS ER HIER AUFTRITT!
+        st.error(f"SQL Error in get_user (Login-Check): {e}") 
+        return None
+        
+    finally:
+        conn.close()
 
 
 ### we use user_ID of the manager, to add their user_ID to the users they create with another column manager_id, so manager only have access to the users, they've created ###
