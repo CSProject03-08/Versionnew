@@ -1,6 +1,7 @@
-import sqlite3
+import pyodbc
 import pickle
 from pathlib import Path
+import streamlit as st
 
 import pandas as pd
 from sklearn.compose import ColumnTransformer
@@ -10,11 +11,36 @@ from sklearn.linear_model import LinearRegression  # multiple linear regression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
 
+SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
+DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
+USERNAME = st.secrets["azure_db"]["USERNAME"]
+PASSWORD = st.secrets["azure_db"]["PASSWORD"]
+
+CONNECTION_STRING = (
+    'DRIVER={ODBC Driver 17 for SQL Server};'
+    f'SERVER={SERVER_NAME};'
+    f'DATABASE={DATABASE_NAME};'
+    f'UID={USERNAME};'
+    f'PWD={PASSWORD};'
+    'Encrypt=yes;'  
+    'TrustServerCertificate=no;'
+)
+
 BASE_DIR = Path(__file__).resolve().parent
 
-DB_PATH = BASE_DIR / "expenses_user_data.db"
 MODEL_PATH = BASE_DIR / "model.pkl"
 TABLE_NAME = "expenses_user_data"
+
+def connect():
+    """Connects to Azure SQL-database"""
+    try:
+        conn = pyodbc.connect(CONNECTION_STRING)
+        return conn
+    except pyodbc.Error as ex:
+        sqlstate = ex.args[0]
+        # show the error
+        st.error(f"Connection error: {sqlstate}")
+        return None
 
 def _make_pipeline():
     """
@@ -40,22 +66,40 @@ def _make_pipeline():
     return pipe
 
 
-def _ensure_table(conn: sqlite3.Connection):
+def _ensure_table(conn: pyodbc.Connection):
     """
-    Ensure the training table exists in the SQLite DB.
+    Stellt sicher, dass die Trainings-Tabelle (TABLE_NAME) in der Azure SQL DB existiert.
+    Die Funktion geht davon aus, dass 'conn' eine bereits geöffnete pyodbc-Verbindung ist.
     """
-    conn.execute(f"""
-        CREATE TABLE IF NOT EXISTS {TABLE_NAME} (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT,
-            date TEXT,
-            dest_city TEXT,
-            duration_days REAL,
-            distance_km REAL,
-            total_cost REAL
-        );
-    """)
-    conn.commit()
+    if conn is None:
+        print("No connection to database possible")
+        return
+
+    try:
+        c = conn.cursor()
+
+        sql_query = f"""
+            IF OBJECT_ID('{TABLE_NAME}', 'U') IS NULL
+            BEGIN
+                CREATE TABLE {TABLE_NAME} (
+                    id INT PRIMARY KEY IDENTITY(1,1),
+                    user_id NVARCHAR(50),
+                    date NVARCHAR(50),
+                    dest_city NVARCHAR(100),
+                    duration_days REAL,
+                    distance_km REAL,
+                    total_cost REAL
+                );
+            END
+        """
+        c.execute(sql_query)
+        conn.commit()
+        print(f"INFO: Tabelle '{TABLE_NAME}' ist verifiziert oder wurde erfolgreich erstellt.")
+
+    except pyodbc.Error as e:
+        print(f"FEHLER: Konnte Tabelle '{TABLE_NAME}' nicht erstellen oder verifizieren: {e}")
+        # rollback if error occures
+        conn.rollback()
 
 
 # initial train of model with sample data
@@ -82,7 +126,7 @@ def initial_train_from_csv(csv_path: str):
         ["user_id", "date", "dest_city", "duration_days", "distance_km", "total_cost"]
     ]
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = connect()
     _ensure_table(conn)
     df_to_db.to_sql(TABLE_NAME, conn, if_exists="append", index=False)
     conn.close()
@@ -96,7 +140,7 @@ def retrain_model():
     """
     Train (or retrain) the model on all rows in the training table.
     """
-    conn = sqlite3.connect(DB_PATH)
+    conn = connect()
     _ensure_table(conn)
     df = pd.read_sql_query(
         f"SELECT dest_city, distance_km, duration_days, total_cost FROM {TABLE_NAME}",
