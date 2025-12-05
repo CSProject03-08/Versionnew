@@ -139,8 +139,27 @@ def employee_listview():
                 finally:
                     conn.close()
 
-                    st.subheader("Weather Forecast for your trips")
-                    weather_widget(st.session_state["user_ID"])
+                st.markdown("### Transportation Details")
+
+                #Transport method loading
+                conn = connect()
+                method_row = pd.read_sql_query("""
+                    SELECT method_transport FROM trips WHERE trip_ID = ?
+                """, conn, params=(row.trip_ID,))
+                conn.close()
+
+                method_transport = method_row.iloc[0]["method_transport"] if not method_row.empty else None
+
+                # calling new function
+                show_transportation_details(method_transport,
+                    row.origin,
+                    row.destination,
+                    row.start_date,
+                    row.start_time
+)
+
+                st.subheader("Weather Forecast for your trips")
+                weather_widget(st.session_state["user_ID"])
 
 def past_trip_view_employee():
     """
