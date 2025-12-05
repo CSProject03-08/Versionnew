@@ -32,15 +32,6 @@ def connect():
 
 def create_tables():
     conn = connect()
-    try:
-        # DIESE ZEILE NUR ZUM DEBUGGING VERWENDEN - LÖSCHEN SIE DIES SPÄTER WIEDER!
-        st.warning(f"Connecting with user: {st.secrets['azure_db']['USERNAME']} to server: {st.secrets['azure_db']['SERVER_NAME']}")
-
-        conn = pyodbc.connect(CONNECTION_STRING)
-        return conn
-    except:
-        raise SyntaxError
-    
     if conn is None:
         return
     c = conn.cursor()
