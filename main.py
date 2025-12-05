@@ -2,10 +2,20 @@ import streamlit as st
 import time
 from db.db_functions_users import create_tables, add_user, get_user_by_credentials, get_role_sortkey, register_main, get_user_ID, get_manager_ID
 import bcrypt
+import requests
 
 ### basic page settings ###
 st.set_page_config(page_title="Login", layout="centered", initial_sidebar_state="collapsed")
 st.title("Login")
+
+def get_public_ip():
+    try:
+        response = requests.get('https://api.ipify.org?format=json')
+        return response.json()['ip']
+    except Exception as e:
+        return f"Fehler: {e}"
+
+st.write(f"Die öffentliche IP-Adresse dieser App ist: **{get_public_ip()}**")
 
 ### create db and table if non-existent ###
 #reset_users_db()  # only for testing purposes, comment out in production
