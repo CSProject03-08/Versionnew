@@ -221,7 +221,7 @@ def create_trip_dropdown(title: str = "Create new trip"):
         # ----------------------------------------------------
         method_transport = 0  # Default: 0 = Car, 1 = Public transport
 
-        with st.form("Create a trip", clear_on_submit=True):
+        with st.form("Create a trip", clear_on_submit=False):
 
             # 1) Trip basics
             origin = st.text_input("Origin")
