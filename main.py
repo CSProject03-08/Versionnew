@@ -1,6 +1,6 @@
 import streamlit as st
 import time
-from db.db_functions_users import create_tables, add_user, get_user_by_credentials, get_role_sortkey, register_main, get_user_ID, get_manager_ID
+from db.db_functions_users import create_tables, add_user, get_user_by_credentials, get_role_sortkey, register_main, get_user_ID, get_manager_ID, initialize_data
 import bcrypt
 import requests
 
@@ -20,6 +20,7 @@ st.write(f"Die öffentliche IP-Adresse dieser App ist: **{get_public_ip()}**")
 ### create db and table if non-existent ###
 #reset_users_db()  # only for testing purposes, comment out in production
 create_tables()
+initialize_data()
 ### add dummies to user.db ###
 add_user("Admin", "123", "a@gmail.com", "Administrator")
 add_user("Manager", "123", "manager@gmail.com", "Manager")
