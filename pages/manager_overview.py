@@ -18,12 +18,12 @@ with right:
     register_user_dropdown()
     edit_user_dropdown()
     del_user_dropdown()
-    st. subheader("Trip-Management")
-    create_trip_dropdown()
-    del_trip_dropdown()
 
 with left:
     st.subheader("Trip-Overview")
     trip_list_view()
     past_trip_list_view()
     del_trip_forever()
+    st. subheader("Trip-Management")
+    create_trip_dropdown()
+    del_trip_dropdown()
