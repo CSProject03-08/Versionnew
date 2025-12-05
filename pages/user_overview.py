@@ -5,6 +5,8 @@ import pandas as pd
 from datetime import date
 from db.db_functions_users import edit_own_profile
 from db.db_functions_employees import employee_listview, past_trip_view_employee
+from api.News import news_widget
+
 
 DB_PATH = "db/users.db"
 
@@ -27,3 +29,4 @@ with left:
 
 with right:
     edit_own_profile()
+    news_widget()
