@@ -1,17 +1,26 @@
+import sqlite3
 import streamlit as st
 import requests
-import json
+import pandas as pd
+import matplotlib.pyplot as plt
+import sys
 from pathlib import Path
-import sqlite3
-import streamlit.components.v1 as components
+#import os
+BASE_DIR = Path(__file__).resolve().parent.parent / "db"   # geht aus api/ eine Ebene hoch nach Projektroot und dann in db/
+DB_PATH = BASE_DIR / "users.db"
+#BASE_DIR = os.path.dirname(os.path.abspath(__file__))   # .../db
+#DB_PATH  = os.path.join(BASE_DIR, "users.db")  
 
-# --- Database connection ---
-DB_PATH = Path(__file__).parent.parent / "db" / "users.db"
-
+### Connecting to the database users.db ###
 def connect():
     return sqlite3.connect(DB_PATH)
 
-# --- Helper to fetch upcoming trips for the logged-in user ---
+# --- Add Versionnew/ to Python path for imports ---
+project_root = Path(__file__).parent.parent  # Goes to Versionnew/
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
+
+# --- Helper function to fetch upcoming trips for a user ---
 def get_upcoming_trips_for_user():
     user_id = int(st.session_state["user_ID"])
     conn = connect()
@@ -23,90 +32,106 @@ def get_upcoming_trips_for_user():
           AND t.end_date >= DATE('now')
         ORDER BY t.start_date ASC
     """
-    rows = conn.execute(query, (user_id,)).fetchall()
-    columns = [col[0] for col in conn.execute("PRAGMA table_info(trips)").fetchall()]
+    c = conn.cursor()
+    rows = c.execute(query, (user_id,)).fetchall()
+    columns = [description[0] for description in c.description]
     conn.close()
     return [dict(zip(columns, row)) for row in rows]
+    #rows = conn.execute(query, (user_id,)).fetchall()
+    #columns = [col[0] for col in conn.execute("PRAGMA table_info(trips)").fetchall()]
+    #conn.close()
+    #return [dict(zip(columns, row)) for row in rows]
 
-# --- Fetch news from Mediastack API ---
-def fetch_news_for_city(city_name: str):
-    API_KEY = "YOUR_MEDIASTACK_API_KEY"  # <-- replace with your key
-    url = "http://api.mediastack.com/v1/news"
-    params = {
-        "access_key": API_KEY,
-        "countries": "ch",
-        "languages": "en",
-        "keywords": city_name,
-        "sort": "published_desc",
-        "limit": 5
-    }
-    try:
-        resp = requests.get(url, params=params)
-        data = resp.json()
-        if "data" not in data or len(data["data"]) == 0:
-            return []
-        return data["data"]
-    except Exception as e:
-        st.error(f"Error fetching news: {e}")
-        return []
+# --- Main weather widget ---
+def weather_widget(username: str = None):
+    """
+    Display upcoming trips and weather forecast for a given user.
+    If username is None, uses the current logged-in user from session_state.
+    """
+    #user_id = int(st.session_state["user_ID"])
 
-# --- News carousel component ---
-def news_carousel(articles, city_name):
-    articles_json = json.dumps(articles)
-    html_code = f"""
-    <div id="carousel-container" style="width: 100%; border: 1px solid #ccc; padding: 20px; border-radius: 12px; background: #f9f9f9; font-family: Arial;">
-        <h3 style="text-align: center; margin-top: 0;">📰 Regional News from {city_name}</h3>
-        <div id="news-content" style="min-height: 150px; margin-bottom: 20px; text-align: left;"></div>
-        <div style="display: flex; justify-content: space-between;">
-            <button id="prev" style="padding: 8px 14px; border-radius: 6px; border: none; background: #ddd; cursor: pointer;">◀ Previous</button>
-            <button id="next" style="padding: 8px 14px; border-radius: 6px; border: none; background: #ddd; cursor: pointer;">Next ▶</button>
-        </div>
-    </div>
-    <script>
-        const articles = {articles_json};
-        let index = 0;
-        function renderArticle() {{
-            const a = articles[index];
-            document.getElementById("news-content").innerHTML = `
-                <h4>${{a.title}}</h4>
-                <p><strong>Source:</strong> ${{a.source || "Unknown"}}</p>
-                <p>${{a.description || ""}}</p>
-                <a href="${{a.url}}" target="_blank">Read full article</a>
-            `;
-        }}
-        document.getElementById("prev").onclick = function() {{
-            index = (index - 1 + articles.length) % articles.length;
-            renderArticle();
-        }};
-        document.getElementById("next").onclick = function() {{
-            index = (index + 1) % articles.length;
-            renderArticle();
-        }};
-        setInterval(function() {{
-            index = (index + 1) % articles.length;
-            renderArticle();
-        }}, 5000);
-        renderArticle();
-    </script>
-    """
-    components.html(html_code, height=350)
-
-# --- Main news widget for all trips ---
-def news_widget():
-    """
-    Loops through all upcoming trips for the logged-in user
-    and displays a news carousel for each trip destination.
-    """
+    st.subheader("Weather Forecast")
     upcoming_trips = get_upcoming_trips_for_user()
+
     if not upcoming_trips:
         st.info("No upcoming trips found.")
         return
 
     for trip in upcoming_trips:
-        city_name = trip["destination"]
-        articles = fetch_news_for_city(city_name)
-        if not articles:
-            st.info(f"No news found for {city_name}.")
+        city_name = trip['destination']
+        start_date = trip['start_date']
+        end_date = trip['end_date']
+
+        # --- Geocoding ---
+        geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={city_name}"
+        geo_resp = requests.get(geo_url).json()
+        if "results" not in geo_resp or len(geo_resp["results"]) == 0:
+            st.warning(f"Could not find coordinates for {city_name}.")
             continue
-        st.subheader(f"📰 News for your trip to {city_name}")
-        news_carousel(articles, city_name)
+
+        lat = geo_resp["results"][0]["latitude"]
+        lon = geo_resp["results"][0]["longitude"]
+
+        # --- Weather Request ---
+        weather_url = "https://api.open-meteo.com/v1/forecast"
+        params = {
+            "latitude": lat,
+            "longitude": lon,
+            "start_date": start_date,
+            "end_date": end_date,
+            "daily": ["temperature_2m_max", "temperature_2m_min",
+                      "rain_sum", "snowfall_sum", "precipitation_probability_max"],
+            "hourly": ["temperature_2m", "relative_humidity_2m",
+                       "precipitation", "rain", "wind_speed_10m"],
+            "timezone": "auto"
+        }
+        weather_resp = requests.get(weather_url, params=params).json()
+
+        # --- Display Trip Info ---
+        st.markdown(f"### ✈️ {city_name} ({start_date} → {end_date})")
+
+        # --- DAILY WEATHER ---
+        if "daily" in weather_resp:
+            daily = weather_resp["daily"]
+            daily_df = pd.DataFrame({
+                "Date": daily["time"],
+                "Temp Max (°C)": daily["temperature_2m_max"],
+                "Temp Min (°C)": daily["temperature_2m_min"],
+                "Rain (mm)": daily["rain_sum"],
+                "Snow (mm)": daily["snowfall_sum"],
+                "Precip Probability (%)": daily["precipitation_probability_max"]
+            })
+            st.write("#### Daily Forecast")
+            st.dataframe(daily_df)
+
+            # Plot daily max/min temperatures
+            fig, ax = plt.subplots(figsize=(8, 3))
+            ax.plot(daily_df["Date"], daily_df["Temp Max (°C)"], label="Max Temp", marker='o')
+            ax.plot(daily_df["Date"], daily_df["Temp Min (°C)"], label="Min Temp", marker='o')
+            ax.set_xlabel("Date")
+            ax.set_ylabel("Temperature (°C)")
+            ax.set_title(f"Daily Temperatures for {city_name}")
+            ax.legend()
+            ax.grid(True)
+            st.pyplot(fig)
+
+        # --- HOURLY WEATHER ---
+        if "hourly" in weather_resp:
+            hourly = weather_resp["hourly"]
+            hourly_df = pd.DataFrame({
+                "Time": hourly["time"],
+                "Temp (°C)": hourly["temperature_2m"],
+                "Humidity (%)": hourly["relative_humidity_2m"],
+                "Precipitation (mm)": hourly["precipitation"],
+                "Rain (mm)": hourly["rain"],
+                "Wind Speed (m/s)": hourly["wind_speed_10m"]
+            })
+            st.write("#### Hourly Forecast (next 48h)")
+            st.dataframe(hourly_df.head(48))  # first 48h only
+
+# --- Run widget for testing ---
+if __name__ == "__main__":
+    st.set_page_config(page_title="Weather Widget Test", layout="wide")
+    st.title("Weather Widget Test")
+    test_username = st.text_input("Enter username for testing:", "")
+    weather_widget(test_username if test_username else None)
