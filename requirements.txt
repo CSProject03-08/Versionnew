@@ -11,3 +11,5 @@ bcrypt
 matplotlib
 pyodbc
 googlemaps
+polyline
+folium
