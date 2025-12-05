@@ -1,4 +1,4 @@
-import sqlite3
+import pyodbc
 import time
 import streamlit as st
 import pandas as pd
@@ -6,56 +6,116 @@ from datetime import date
 from api.api_city_lookup import get_city_coords
 from geopy.distance import geodesic
 from ml.ml_model import load_model
-import os
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))   # .../db
-DB_PATH  = os.path.join(BASE_DIR, "users.db")  
 
-### Connecting to the database trips.db ###
+SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
+DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
+USERNAME = st.secrets["azure_db"]["USERNAME"]
+PASSWORD = st.secrets["azure_db"]["PASSWORD"]
+
+CONNECTION_STRING = (
+    'DRIVER={ODBC Driver 17 for SQL Server};'
+    f'SERVER={SERVER_NAME};'
+    f'DATABASE={DATABASE_NAME};'
+    f'UID={USERNAME};'
+    f'PWD={PASSWORD};'
+    'Encrypt=yes;'  
+    'TrustServerCertificate=no;'
+)
+
+### Connecting to the database ###
 def connect():
-    return sqlite3.connect(DB_PATH)
+    """Connects to Azure SQL-Datenbank"""
+    try:
+        conn = pyodbc.connect(CONNECTION_STRING)
+        return conn
+    except pyodbc.Error as ex:
+        sqlstate = ex.args[0]
+        # show the error
+        st.error(f"Connection error: {sqlstate}")
+        return None
 
 
 ### Creating necessary tables for trips ###
 def create_trip_table():
     conn = connect()
-    conn.execute("PRAGMA foreign_keys = ON;")
+    if conn is None:
+        return
+    
     c = conn.cursor()
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS trips (
-                        trip_ID INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-                        origin TEXT NOT NULL,
-                        destination TEXT NOT NULL,
-                        start_date TEXT,
-                        end_date TEXT,
-                        start_time TEXT,
-                        end_time TEXT, 
-                        occasion TEXT,
-                        manager_ID INTEGER,
-                        show_trip_m INTEGER NOT NULL DEFAULT 1,
-                        show_trip_e INTEGER NOT NULL DEFAULT 1
-    )
-    """)
-    conn.commit()
-    conn.close()
+    try:
+        c.execute("""
+            IF OBJECT_ID('trips', 'U') IS NULL
+            BEGIN
+                CREATE TABLE trips (
+                    trip_ID INT PRIMARY KEY IDENTITY(1,1), -- NOT NULL entfernt, da PK implizit NOT NULL ist
+                    origin NVARCHAR(255) NOT NULL,
+                    destination NVARCHAR(255) NOT NULL,
+                    start_date DATE,
+                    end_date DATE,
+                    start_time TIME,
+                    end_time TIME, 
+                    occasion NVARCHAR(MAX),
+                    manager_ID INT,
+                    show_trip_m INT NOT NULL DEFAULT 1,
+                    show_trip_e INT NOT NULL DEFAULT 1
+                ); -- Wichtig: Semikolon am Ende des CREATE TABLE Statements.
+            END
+        """)
+        conn.commit()
+    except Exception as e:
+        st.error(f"Failed to create table 'trips': {e}")
+    finally:
+        conn.close()
 
 def create_trip_users_table():
     conn = connect()
-    conn.execute("PRAGMA foreign_keys = ON;")
+    if conn is None:
+        return
+
     c = conn.cursor()
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS user_trips (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        trip_ID INTEGER NOT NULL,
-                        user_ID INTEGER NOT NULL,
-                        UNIQUE (user_ID, trip_ID),
-                        FOREIGN KEY(trip_ID) REFERENCES trips(trip_ID) ON DELETE CASCADE,
-                        FOREIGN KEY(user_ID) REFERENCES users(user_ID) ON DELETE CASCADE
-    )
-    """)
-    c.execute("CREATE INDEX IF NOT EXISTS ix_user_trips_trip ON user_trips(trip_ID);")
-    c.execute("CREATE INDEX IF NOT EXISTS ix_user_trips_user ON user_trips(user_ID);")
-    conn.commit()
-    conn.close()
+    
+    try:
+        # Existenzprüfung für 'user_trips'
+        c.execute("""
+            IF OBJECT_ID('user_trips', 'U') IS NULL
+            BEGIN
+                CREATE TABLE user_trips (
+                    id INT PRIMARY KEY IDENTITY(1,1) NOT NULL,
+                    trip_ID INT NOT NULL,
+                    user_ID INT NOT NULL,
+                    UNIQUE (user_ID, trip_ID),
+                    FOREIGN KEY(trip_ID) REFERENCES trips(trip_ID) ON DELETE CASCADE,
+                    FOREIGN KEY(user_ID) REFERENCES users(user_ID) ON DELETE CASCADE
+                ); 
+            END
+        """)
+        conn.commit()
+    except Exception as e:
+        st.error(f"Failed to create table 'user_trips': {e}")
+        conn.close()
+        return
+
+    # creates index only if not exists
+    try:
+        c.execute("""
+            IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_user_trips_trip' AND object_id = OBJECT_ID('user_trips'))
+            BEGIN
+                CREATE INDEX ix_user_trips_trip ON user_trips(trip_ID);
+            END
+        """)
+        
+        c.execute("""
+            IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_user_trips_user' AND object_id = OBJECT_ID('user_trips'))
+            BEGIN
+                CREATE INDEX ix_user_trips_user ON user_trips(user_ID);
+            END
+        """)
+        conn.commit()
+    except Exception as e:
+        st.error(f"Failed to create indexes for 'user_trips': {e}")
+        
+    finally:
+        conn.close()
 
 ####not used yet#### probably not necessary
 def create_manager_trip_table():
@@ -98,40 +158,56 @@ def get_trips_for_current_manager():
 
 def add_trip(origin, destination, start_date, end_date, start_time_str, end_time_str, occasion, manager_ID, user_ids):
     conn = connect()
-    conn.execute("PRAGMA foreign_keys = ON;")
+    if conn is None:
+        return
+    
     c = conn.cursor()
     try:
         manager_ID = int(st.session_state["user_ID"])
+
         c.execute(
-            "INSERT INTO trips (origin, destination, start_date, end_date, start_time, end_time, occasion, manager_ID) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO trips (origin, destination, start_date, end_date, start_time, end_time, occasion, manager_ID) "
+            "OUTPUT INSERTED.trip_ID "  # Azure mechanism to return the latest trip_ID
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (origin, destination, start_date, end_date, start_time_str, end_time_str, occasion, manager_ID)
         )
+        
         if user_ids:
-            trip_ID = c.lastrowid
+            # replaces c.lastrowid from Sqlite
+            trip_ID = c.fetchone()[0]
+
             user_trips_list = [(trip_ID, user_ID) for user_ID in user_ids]
-            c.executemany("INSERT OR IGNORE INTO user_trips (trip_ID, user_ID) VALUES (?, ?)", user_trips_list)
+            c.executemany("INSERT INTO user_trips (trip_ID, user_ID) VALUES (?, ?)", user_trips_list)
+            
         conn.commit()
     except Exception as e:
+        conn.rollback() # often used with pyodbc
         st.error(f"Unable to add the trip: {e}")
     finally:
         conn.close()
 
 def del_trip(deleted_tripID: int):
     conn = connect()
-    conn.execute("PRAGMA foreign_keys = ON;")
+    if conn is None:
+        return
+    
     c = conn.cursor()
     try:
-        c.execute(
-            "DELETE FROM trips WHERE trip_ID = ?",
-            (deleted_tripID,)
-        )
         c.execute(
             "DELETE FROM user_trips WHERE trip_ID = ?",
             (deleted_tripID,)
         )
+        
+        # not necessary because of ON DELETE CASCADE but for backup reasons left
+        c.execute(
+            "DELETE FROM trips WHERE trip_ID = ?",
+            (deleted_tripID,)
+        )
+        
         conn.commit()
-    except:
-        st.error("Unable to delete the trip")
+    except Exception as e:
+        conn.rollback()
+        st.error(f"Unable to delete the trip: {e}")
     finally:
         conn.close()
 
@@ -150,6 +226,8 @@ def create_trip_dropdown(title: str = "Create new trip"):
             manager_ID = int(st.session_state["user_ID"])
 
             conn = connect()
+            if conn is None:
+                return
             user_df = pd.read_sql_query("""SELECT u.user_ID, u.username FROM users u 
                                         JOIN roles r ON u.role = r.role 
                                         WHERE r.sortkey < 3
@@ -197,15 +275,17 @@ def del_trip_dropdown(title: str = "Delete trip"):
 #trip table overview
 def trip_list_view():
     conn = connect()
+    if conn is None:
+        return
     manager_ID = int(st.session_state["user_ID"])
     trip_df = pd.read_sql_query("""
         SELECT trip_ID, origin, destination, start_date, end_date, start_time, end_time, occasion
         FROM trips
         WHERE manager_ID = ?
-        AND ? <= end_date
+        AND CAST(GETDATE() AS DATE) <= end_date
         AND show_trip_m = 1
         ORDER BY start_date
-    """, conn, params=(manager_ID, date.today()))
+    """, conn, params=(manager_ID,))
     conn.close()
 
     if trip_df.empty:
@@ -346,31 +426,39 @@ def trip_list_view():
 
                     #create new connection
                     user_trips_list = [(row.trip_ID, uid) for uid in selected_users]
-                    c.executemany(
-                        "INSERT OR IGNORE INTO user_trips (trip_ID, user_ID) VALUES (?, ?)",
-                    user_trips_list
-                    )
+                    try:
+                        c.executemany(
+                            "INSERT INTO user_trips (trip_ID, user_ID) VALUES (?, ?)",
+                        user_trips_list
+                        )
 
-                    conn.commit()
-                    conn.close()
-                    st.success("Participants updated!")
-                    time.sleep(0.5)
-                    st.rerun()
+                        conn.commit()
+                        st.success("Participants updated!")
+                    except Exception as e:
+                        conn.rollback()
+                        st.error(f"Failed to update participants: {e}")
+                    finally:
+                        conn.close()
+                        if 'st.error' not in st.session_state:
+                            time.sleep(0.5)
+                            st.rerun()
 
 def past_trip_list_view():
 
     st.subheader("Past trips")
 
     conn = connect()
+    if conn is None:
+        return
     manager_ID = int(st.session_state["user_ID"])
     trip_df = pd.read_sql_query("""
         SELECT trip_ID, origin, destination, start_date, end_date, start_time, end_time, occasion
         FROM trips
         WHERE manager_ID = ?
-        AND ? > end_date
+        AND CAST(GETDATE() AS DATE) > end_date
         AND show_trip_m = 1
         ORDER BY start_date
-    """, conn, params=(manager_ID, date.today()))
+    """, conn, params=(manager_ID,))
     conn.close()
 
     if trip_df.empty:
@@ -409,12 +497,14 @@ def past_trip_list_view():
 
         if archived:
             conn = connect()
+            if conn is None:
+                return
             c = conn.cursor()
             manager_ID = int(st.session_state["user_ID"])
             c.execute("""UPDATE trips SET show_trip_m = 0
                 WHERE manager_id = ?
-                AND ? > end_date
-            """, (manager_ID, date.today()))
+                AND CAST(GETDATE() AS DATE) > end_date
+            """, (manager_ID,))
             conn.commit()
             conn.close()
             st.success("Archived past trips!")
@@ -424,12 +514,19 @@ def past_trip_list_view():
 def del_trip_forever():
          
     conn = connect()
-    conn.execute("PRAGMA foreign_keys = ON;")
+    if conn is None:
+        return
     c = conn.cursor()
     manager_ID = int(st.session_state["user_ID"])
-    c.execute("""DELETE FROM trips
-        WHERE manager_id = ?
-        AND (julianday(?) - julianday(end_date)) > 365 
-    """, (manager_ID, date.today()))
-    conn.commit()
-    conn.close()
+    try:
+        c.execute("""DELETE FROM trips 
+            WHERE manager_ID = ?
+            AND show_trip_m = 0
+            AND DATEDIFF(day, end_date, GETDATE()) > 365
+        """, (manager_ID,))
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        st.error(f"Failed to delete old archived trips: {e}")
+    finally:
+        conn.close()
