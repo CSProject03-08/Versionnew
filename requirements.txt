@@ -14,4 +14,3 @@ googlemaps
 polyline
 folium
 streamlit_folium
-plotly
