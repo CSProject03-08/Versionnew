@@ -172,15 +172,4 @@ def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7
                     "Choose a transportation option after entering the API key and updating the comparison."
                 )
 
-            invite_clicked = st.form_submit_button("Invite", type="primary", on_click=clear_trip_form_manual)
-
-            # ----------------------------------------------------
-            # TRIP SPEICHERN (außerhalb des Forms, aber abhängig von invite_clicked)
-            # ----------------------------------------------------
-            if invite_clicked:
-                if not destination:
-                    st.error("Destination must not be empty.")
-                else:
-                    add_trip(origin, destination, start_date, end_date, start_time_str, end_time_str, occasion, manager_ID, user_ids, method_transport)
-                    st.success("Trip saved!")
-                    st.rerun()
+            st.form_submit_button("Invite", type="primary", on_click=clear_trip_form_manual)
