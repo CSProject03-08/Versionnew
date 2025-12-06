@@ -244,7 +244,7 @@ def clear_trip_form_manual():
         st.session_state["trip_occasion"] = ""
         st.session_state["trip_users"] = []
         st.session_state["transport_comparison_done"] = False
-        st.success("Trip saved! Data cleared.")
+        st.success("Data cleared!")
         time.sleep(2)
         st.rerun()
 
@@ -365,7 +365,7 @@ def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7
                 else:
                     add_trip(origin, destination, start_date, end_date, start_time_str, end_time_str, occasion, manager_ID, user_ids, method_transport)
                     st.success("Trip saved!")
-                    clear_trip_form_manual()
+                    st.rerun()
 
 
 def del_trip_dropdown(title: str = "Delete trip"):

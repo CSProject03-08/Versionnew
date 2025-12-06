@@ -1,6 +1,6 @@
 import streamlit as st
 from db.db_functions_users import register_user_dropdown, del_user_dropdown, edit_user_dropdown
-from db.db_functions_trips import create_trip_dropdown, del_trip_dropdown, create_trip_table, create_trip_users_table, trip_list_view, past_trip_list_view, del_trip_forever
+from db.db_functions_trips import create_trip_dropdown, del_trip_dropdown, create_trip_table, create_trip_users_table, trip_list_view, past_trip_list_view, del_trip_forever, clear_trip_form_manual
 st.set_page_config(page_title="Manager Overview", layout="wide")
 st.title("Manager Dashboard")
 create_trip_table()
@@ -26,4 +26,5 @@ with left:
     del_trip_forever()
     st. subheader("Trip-Management")
     create_trip_dropdown()
+    clear_trip_form_manual()
     del_trip_dropdown()
