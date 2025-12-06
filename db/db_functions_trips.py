@@ -244,6 +244,38 @@ def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7
     Returns:
         None
     """
+    if "transport_comparison_done" not in st.session_state:
+        st.session_state["transport_comparison_done"] = False
+
+    keys_to_init = [
+        "trip_origin", "trip_destination", "trip_start_date", "trip_end_date",
+        "trip_start_time", "trip_end_time", "trip_occasion", "trip_users", 
+        "trip_transport_method"
+    ]
+
+    for key in keys_to_init:
+        if key not in st.session_state:
+            # Setze sinnvolle Startwerte für die Keys
+            if "date" in key:
+                 st.session_state[key] = pd.to_datetime("today").date()
+            elif "time" in key:
+                 st.session_state[key] = pd.to_datetime("09:00").time()
+            elif key == "trip_users":
+                 st.session_state[key] = []
+            elif key == "trip_transport_method":
+                 st.session_state[key] = "Car"
+            else:
+                 st.session_state[key] = ""
+
+    def _clear_trip_form_manual():
+        """Löscht manuell die Werte im Session State nach erfolgreichem Invite."""
+        st.session_state["trip_origin"] = ""
+        st.session_state["trip_destination"] = ""
+        st.session_state["trip_occasion"] = ""
+        st.session_state["trip_users"] = []
+        # Setze den Vergleichsstatus zurück
+        st.session_state["transport_comparison_done"] = False
+
     with st.expander(title, expanded=False):
 
         # ----------------------------------------------------
@@ -251,18 +283,18 @@ def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7
         # ----------------------------------------------------
         method_transport = 0  # Default: 0 = Car, 1 = Public transport
 
-        with st.form("Create a trip", clear_on_submit=True):
+        with st.form("Create a trip", clear_on_submit=False):
 
             # 1) Trip basics
-            origin = st.text_input("Origin")
-            destination = st.text_input("Destination")
-            start_date = st.date_input("Departure")
-            end_date = st.date_input("Return")
-            start_time = st.time_input("Start Time")
-            end_time = st.time_input("End Time")
-            start_time_str = start_time.strftime("%H:%M")
-            end_time_str = end_time.strftime("%H:%M")
-            occasion = st.text_input("Occasion")
+            origin = st.text_input("Origin", key="trip_origin")
+            destination = st.text_input("Destination", key="trip_destination")
+            start_date = st.date_input("Departure", key="trip_start_date")
+            end_date = st.date_input("Return", key="trip_end_date")
+            start_time = st.time_input("Start Time", key="trip_start_time")
+            end_time = st.time_input("End Time", key="trip_end_time")
+            start_time_str = st.session_state["trip_start_time"].strftime("%H:%M")
+            end_time_str = st.session_state["trip_end_time"].strftime("%H:%M")
+            occasion = st.text_input("Occasion", key="trip_occasion")
             manager_ID = int(st.session_state["user_ID"])
 
             conn = connect()
@@ -279,7 +311,7 @@ def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7
 
 
             options = list(zip(user_df["user_ID"], user_df["username"]))
-            selected = st.multiselect("Assign users", options=options, format_func=lambda x: x[1])
+            selected = st.multiselect("Assign users", options=options, format_func=lambda x: x[1], key="trip_users")
             user_ids = [opt[0] for opt in selected]
 
             # 2) API-Key und Vergleich
@@ -288,7 +320,7 @@ def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7
 
             api_key = st.secrets["GOOGLE_API_KEY"]
 
-            compare_clicked = st.form_submit_button("Do the comparison")
+            compare_clicked = st.form_submit_button("Do the comparison", type="secondary")
 
             if compare_clicked and origin and destination:
                 st.session_state["transport_comparison_done"] = True
@@ -303,6 +335,7 @@ def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7
                 "Preferred transportation",
                 ["Car", "Public transport"],
                 disabled=not comparison_ready,
+                key="trip_transport_method",
             )
 
             if comparison_ready:
@@ -313,7 +346,7 @@ def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7
                     "Choose a transportation option after entering the API key and updating the comparison."
                 )
 
-            invite_clicked = st.form_submit_button("Invite")
+            invite_clicked = st.form_submit_button("Invite", type="primary")
 
             # ----------------------------------------------------
             # TRIP SPEICHERN (außerhalb des Forms, aber abhängig von invite_clicked)
@@ -324,6 +357,7 @@ def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7
                 else:
                     add_trip(origin, destination, start_date, end_date, start_time_str, end_time_str, occasion, manager_ID, user_ids, method_transport)
                     st.success("Trip saved!")
+                    _clear_trip_form_manual()
                     time.sleep(2)
                     st.rerun()
 
