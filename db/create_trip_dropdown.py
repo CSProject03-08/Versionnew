@@ -3,7 +3,7 @@ import time
 import streamlit as st
 import pandas as pd
 from api.api_transportation import transportation_managerview
-from db_functions_trips import add_trip
+from db.db_functions_trips import add_trip
 
 ### pulling crucial access infromation from streamlit secrets file ###
 SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
