@@ -1,3 +1,6 @@
+"""db_function_users.py defines the necessary functions for the whole user-management, including creation of the roles Admin, Manager and User/Employee. It includes functions for adding users, editing user data, deleting users, fetching user data based on credentials as well as
+initializing the database tables."""
+
 import pyodbc
 import time
 import streamlit as st
@@ -20,23 +23,37 @@ CONNECTION_STRING = (
 )
 
 def connect():
-    """Connects to Azure SQL-database"""
+    """Connects to Azure SQL-database.
+    
+    Args:
+        None
+        
+    Returns:
+        None
+    """
     try:
         conn = pyodbc.connect(CONNECTION_STRING)
         return conn
     except pyodbc.Error as ex:
         sqlstate = ex.args[0]
-        # show the error
         st.error(f"Connection error: {sqlstate}")
         return None
 
 def create_tables():
+    """Creates the tables 'roles' and 'users' in the database if they do not already exist. 
+    
+    Args:
+        None
+        
+    Returns:
+        None
+    """
     conn = connect()
     if conn is None:
         return
     c = conn.cursor()
 
-    # --- 1. ROLES-Tabelle erstellen (Muss VOR users erstellt werden) ---
+    # Table roles must be created first because of foreign key in Users table. Roles table has role and sortkey, where sortkey defines hierarchy.
     try:
         c.execute("""
         IF OBJECT_ID('roles', 'U') IS NULL 
@@ -47,16 +64,15 @@ def create_tables():
             )
         END
         """)
-        print("Tabelle 'roles' erstellt oder existiert bereits.")
+        print("Tabelle 'roles' erstellt oder existiert bereits.") #feedback
     except pyodbc.Error as e:
-        # Hier könnten wir prüfen, ob der Fehler ein existierendes Objekt ist
-        print(f"Fehler beim Erstellen von 'roles': {e}")
+        print(f"Fehler beim Erstellen von 'roles': {e}") #error if table creation fails
         pass
 
 
-    # --- 2. USERS-Tabelle erstellen ---
+    # Create users table, with user_ID, username, password, email, role and manager_ID.
     try:
-        # IDENTITY(1,1) ist die korrekte Syntax für AUTOINCREMENT in Azure SQL
+        # IDENTITY(1,1) is the same as AUTOINCREMENT in SQLite.
         c.execute("""
         IF OBJECT_ID('users', 'U') IS NULL
         BEGIN
@@ -71,9 +87,9 @@ def create_tables():
             )
         END
         """)
-        print("Tabelle 'users' erstellt oder existiert bereits.")
+        print("Table 'users' has been created! or already exists.") #feedback
     except pyodbc.Error as e:
-        print(f"Fehler beim Erstellen von 'users': {e}")
+        print(f"Creating table 'users' failed!: {e}") #error if table creation fails
         pass
 
     conn.commit()
@@ -81,12 +97,18 @@ def create_tables():
 
 
 def initialize_data():
+    """Dummy Data used while development phase, remove or comment out in production. Admin will be defined in st.secrets later on.
+    Args:
+        None
+        
+    Returns:
+        None
+    """
     conn = connect()
     if conn is None:
         return
     c = conn.cursor()
 
-    # --- 1. Rollen bedingt einfügen ---
     roles_to_insert = [
         ("Administrator", 3),
         ("Manager", 2),
@@ -94,7 +116,7 @@ def initialize_data():
     ]
     
     for role_name, sortkey_val in roles_to_insert:
-        # Korrekte T-SQL Logik: Prüft, ob der Wert existiert, und fügt ihn nur dann ein
+        # Checks first if role already exists, if not insert it
         try:
             c.execute("""
                 IF NOT EXISTS (SELECT 1 FROM roles WHERE role = ?)
@@ -103,33 +125,20 @@ def initialize_data():
                 END
             """, role_name, role_name, sortkey_val)
         except pyodbc.Error as e:
-            # Wird nur ausgeführt, wenn etwas anderes als eine Duplizierung fehlschlägt
-            print(f"Fehler beim Einfügen der Rolle {role_name}: {e}")
-            pass
-            
-    # --- 2. Admin-User bedingt einfügen ---
-    # Fügen Sie den Admin nur ein, wenn er noch nicht existiert
-    #admin_username = 'Admin'
-    #admin_password = '123'
-    #admin_email = "admin@hsg.ch"
-    #admin_role = 'Administrator'
-    
-    #try:
-        #c.execute("""
-            #IF NOT EXISTS (SELECT 1 FROM users WHERE username = ?)
-            #BEGIN
-                #INSERT INTO users (username, password, email, role, manager_ID)
-                #VALUES (?, ?, ?, ?, ?)
-            #END
-        #""", admin_username, admin_username, admin_password, admin_email, admin_role, None)
-    #except pyodbc.Error as e:
-        #print(f"Fehler beim Einfügen des Admin-Users: {e}")
-        #pass
-            
+            # error if role insertion fails
+            print(f"Fail to insert data {role_name}: {e}")
+            pass      
     conn.commit()
     conn.close()
 
 def get_user(username):
+    """Fetches user data based on the provided username.
+    Args:
+        username (str): The username of the user to fetch.
+        
+    Returns:
+        tuple: User data if found, else None.
+    """
     conn = connect()
     if conn is None:
         return
@@ -139,8 +148,16 @@ def get_user(username):
     conn.close()
     return data
 
-### we use user_ID of the manager, to add their user_ID to the users they create with another column manager_id, so manager only have access to the users, they've created ###
+
 def get_user_ID(username: str):
+    """ Used to get the User-ID of the Managers, to create Manager_ID column in  users.db, to be able to groupt the all app-users according to the manager which created them.
+    Args:
+        username (str): The username of the user to fetch the ID for.
+        
+    Returns:
+        int: User ID if found, else None.
+    """
+
     conn = connect()
     if conn is None:
         return
@@ -156,6 +173,14 @@ def get_user_ID(username: str):
     return None
 
 def get_manager_ID(username: str):
+    """ Used to get the Manager_ID of a user based on their username.
+    Args:
+        username (str): The username of the user to fetch the Manager_ID for.
+    
+    Returns:
+        int: Manager ID if found, else None.
+    """
+
     conn = connect()
     if conn is None:
         return
@@ -165,9 +190,19 @@ def get_manager_ID(username: str):
     conn.close()
     return row[0] if row else None
 
-### Adding users ###
 def add_user(username, password, email, role):
-    hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+    """Adds a new user to the database with the provided details.
+    Args:
+        username (str): The username of the new user.
+        password (str): The password of the new user. (econded with bcrypt)
+        email (str): The email of the new user.
+        role (str): The role of the new user.
+    
+    Returns:
+        None, however adds user to database.
+    """
+
+    hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()) #encode password with bcrypt
     conn = connect()
     if conn is None:
         return
@@ -186,21 +221,38 @@ def add_user(username, password, email, role):
         conn.close()
 
 ### Comparison from inputs to databank, old is without bcyrypt as backup here ###
-def get_user_by_credentials_old(username, password):
-    hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-    conn = connect()
-    if conn is None:
-        return
-    c = conn.cursor()
-    c.execute(
-        "SELECT username, role FROM users WHERE username = ? AND password = ?",
-        (username, hashed_pw)
-    )
-    user = c.fetchone()
-    conn.close()
-    return user
+#def get_user_by_credentials_old(username, password):
+#    """Fetches user data based on the provided username and password.
+#    Args:
+#        username (str): The username of the user to fetch.
+#        password (str): The password of the user to fetch.
+#    
+#    Returns:
+#        tuple: User data if found, else None.
+#    """
+#    hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+#    conn = connect()
+#    if conn is None:
+#        return
+#    c = conn.cursor()
+#    c.execute(
+#        "SELECT username, role FROM users WHERE username = ? AND password = ?",
+#    )
+#        (username, hashed_pw)
+#    user = c.fetchone()
+#    conn.close()
+#    return user
 
 def get_user_by_credentials(username, password):
+    """Fetches user data based on the provided username and password.
+    Args:
+        username (str): The username of the user to fetch.
+        password (str): The password of the user to fetch.      
+    
+    Returns:
+        tuple: User data if found, else None.
+    """
+
     conn = connect()
     if conn is None:
         return
@@ -231,8 +283,16 @@ def get_user_by_credentials(username, password):
     else:
         return None
 
-### Assign sortkey to roles for user management ###
+
 def get_role_sortkey(role):
+    """Fetches the sortkey for a given role.
+    Args:
+        role (str): The role to fetch the sortkey for.
+        
+    Returns:
+        int: Sortkey if found, else None.
+    """
+    
     conn = connect()
     if conn is None:
         return
@@ -244,8 +304,16 @@ def get_role_sortkey(role):
         return row
     return None
 
-### List of all users under own role_sortkey ###
+
 def list_roles_editable():
+    """Lists all roles that are editable based on the current user's role sortkey(editable users: all under own sortkey).
+    Args:
+        None
+    
+    Returns:
+        list: List of editable roles.
+    """
+    
     current_sortkey = st.session_state["role_sortkey"]
     conn = connect()
     if conn is None:
@@ -265,8 +333,15 @@ def list_roles_editable():
         return roles
     return []
 
-### returns all users which the manager has created ###
 def get_users_for_current_manager():
+    """Fetches all users created by the current manager.
+    Args:
+        None
+
+    Returns:
+        list: List of users created by the current manager.
+    """   
+
     if "user_ID" not in st.session_state:
         return []
 
@@ -288,15 +363,23 @@ def get_users_for_current_manager():
         return rows
     return []
 
-### Dropdown for manager page to register someone ###
+
 def register_user_dropdown(title: str = "Register new user"):
+    """Dropdown form in Streamlit to register a new user, accessible by managers.
+     Args:
+        title (str): The title of the dropdown form.
+        
+    Returns:
+        None
+    """
+
     if "role_sortkey" not in st.session_state:
         st.warning("You're not authorized to add new users")
         return
 
     roles = list_roles_editable()
     role_names = [r[0] for r in roles]
-
+    # Dropdown form in Streamlit
     with st.expander(title, expanded=False):
         with st.form("register_user_form"):
             col1, col2 = st.columns(2)
@@ -309,7 +392,7 @@ def register_user_dropdown(title: str = "Register new user"):
                 role      = st.selectbox("Rolle", role_names if role_names else ["— no available role —"])
 
             submitted = st.form_submit_button("Register")
-
+        # Process form submission
         if submitted:
             if not username or not password:
                 st.warning("Please enter username and password")
@@ -320,7 +403,7 @@ def register_user_dropdown(title: str = "Register new user"):
             if not role_names or role not in role_names:
                 st.error("You're not allowed to add this role")
                 return
-
+            # Try to add user and handle potential database errors
             try:
                 add_user(username, password, email, role)
                 st.success(f"User **{username}** was registered")
@@ -331,8 +414,16 @@ def register_user_dropdown(title: str = "Register new user"):
             except Exception as e:
                 st.error(f"Unexpected Error: {e}")
 
-### Dropdown for admin page to register someone ###
+
 def register_user_dropdown_admin(title: str = "Register new user"):
+    """Dropdown form in Streamlit to register a new user, accessible by Admins.
+     Args:
+        title (str): The title of the dropdown form.
+        
+    Returns:
+        None
+    """
+
     if "role_sortkey" not in st.session_state:
         st.warning("You're not authorized to add new users")
         return
@@ -376,8 +467,15 @@ def register_user_dropdown_admin(title: str = "Register new user"):
                 st.error(f"Unexpected Error: {e}")
 
 
-### Dropdown for manager page to delete someone ###
 def del_user_dropdown(title: str = "Delete user"):
+    """Dropdown in Streamlit to delete a user, accessible by managers.
+     Args:
+        title (str): The title of the dropdown form.
+    
+    Returns:
+        None
+    """
+
     if "role_sortkey" not in st.session_state:
         st.warning("You're not authorized to delete users.")
         return
@@ -430,8 +528,14 @@ def del_user_dropdown(title: str = "Delete user"):
             finally:
                 conn.close()
 
-### Dropdown for Admin page to delete someone ###
 def del_user_dropdown_admin(title: str = "Delete user"):
+    """Dropdown in Streamlit to delete a user, accessible by Admins.
+     Args:
+        title (str): The title of the dropdown form.
+
+    Returns:
+        None
+    """
     if "role_sortkey" not in st.session_state:
         st.warning("You're not authorized to delete users.")
         return
@@ -481,8 +585,14 @@ def del_user_dropdown_admin(title: str = "Delete user"):
             finally:
                 conn.close()
 
-### Dropdown for manager page to edit existing person ###
 def edit_user_dropdown(title: str = "Edit user"):
+    """Dropdown in Streamlit to edit a user, accessible by managers.
+     Args:
+        title (str): The title of the dropdown form.
+        
+    Returns:
+        None
+    """
     if "role_sortkey" not in st.session_state:
         st.warning("You're not authorized to edit users.")
         return
@@ -513,7 +623,7 @@ def edit_user_dropdown(title: str = "Edit user"):
     with st.expander(title, expanded=False):
         user_list = [u[0] for u in users]
         selected_user = st.selectbox("Select user to edit", user_list, key="edit_user_select")
-        selected_user_data = next((u for u in users if u[0] == selected_user), None) #should five queried datapoints back
+        selected_user_data = next((u for u in users if u[0] == selected_user), None) #should give queried datapoints back
 
         conn = connect()
         if conn is None:
@@ -531,11 +641,11 @@ def edit_user_dropdown(title: str = "Edit user"):
 
         editable_roles = list_roles_editable()
         editable_role_names = [r[0] for r in editable_roles]
-        # Index der aktuell zugewiesenen Rolle in der Liste der bearbeitbaren Rollen
+        # Set default index for role selection
         try:
             default_role_index = editable_role_names.index(current_role)
         except ValueError:
-            # Fallback, falls die aktuelle Rolle (was unwahrscheinlich ist) nicht in der editierbaren Liste ist
+            # If current role not found in editable roles, default to first role
             default_role_index = 0
 
         with st.form("edit_user_form"):
@@ -556,7 +666,6 @@ def edit_user_dropdown(title: str = "Edit user"):
             submitted = st.form_submit_button("Save changes")
 
             if submitted:
-                # 1. Validierung
                 if not new_username:
                     st.error("Username cannot be empty.")
                     return
@@ -564,15 +673,12 @@ def edit_user_dropdown(title: str = "Edit user"):
                     st.error("Invalid role selected.")
                     return
 
-                # 2. Passwort-Update-Logik
                 if new_password:
-                    # Hash das neue Passwort
+                    # hash new password
                     pw_to_store = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
                 else:
-                    # Behalte den alten Hash bei
                     pw_to_store = current_password
 
-                # 3. Datenbank-Update mit Fehlerbehandlung
                 conn = connect()
                 if conn is None:
                     return
@@ -591,32 +697,21 @@ def edit_user_dropdown(title: str = "Edit user"):
                     st.rerun()
                 
                 except pyodbc.Error as e:
-                    # Fängt Integritätsverletzungen (z.B. Duplizierter Username oder ungültige Rolle) ab
+                    # catches invalide entries (i.e. doubled username)
                     st.error(f"Update failed due to a database error: Check if the new username '{new_username}' already exists or if the role is valid. Details: {e}")
                 except Exception as e:
                     st.error(f"Unexpected Error during update: {e}")
                 finally:
                     conn.close()
 
-                #hashed_pw = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
-                #conn = connect()
-                #if conn is None:
-                    #return
-                #c = conn.cursor()
-                #c.execute("""
-                    #UPDATE users
-                    #SET username = ?, password = ?, email = ?, role = ?
-                    #WHERE username = ?
-                #""", (new_username, hashed_pw, new_email, new_role, username))
-                #conn.commit()
-                #conn.close()
-
-                #st.success(f"✅ User '{username}' updated successfully.")
-                #time.sleep (2)
-                #st.rerun()
-
-### Dropdown for Admin page to edit existing person ###
 def edit_user_dropdown_admin(title: str = "Edit user"):
+    """Dropdown in Streamlit to edit a user, accessible by Admins.
+     Args:
+        title (str): The title of the dropdown form.
+
+    Returns:
+        None
+    """
     if "role_sortkey" not in st.session_state:
         st.warning("You're not authorized to edit users.")
         return
@@ -645,19 +740,11 @@ def edit_user_dropdown_admin(title: str = "Edit user"):
     with st.expander(title, expanded=False):
         user_list = [u[0] for u in users]
         selected_user = st.selectbox("Select user to edit", user_list, index=None, key="admin_edit_user_select")
-        selected_user_data = next((u for u in users if u[0] == selected_user), None) #should five queried datapoints back
+        selected_user_data = next((u for u in users if u[0] == selected_user), None) #should give queried datapoints back
 
         if not selected_user_data:
             st.warning("User not found yet.")
             return
-
-        #c.execute("""
-            #SELECT username, password, email, role, manager_ID
-            #FROM users
-            #WHERE username = ?
-        #""", (selected_user,))
-        #user_data = c.fetchone()
-        #conn.close()
 
         username, current_email, current_password, current_role, current_manager_ID = selected_user_data
         editable_roles = list_roles_editable()
@@ -734,8 +821,15 @@ def edit_user_dropdown_admin(title: str = "Edit user"):
             finally:
                 conn.close()
 
-### Dropdown for main page to register as manager ###
 def register_main(title: str = "Register as manager"):
+    """Dropdown form in Streamlit to register a new manager, accessible by anyone.
+     Args:
+        title (str): The title of the dropdown form.   
+
+    Returns:
+        None
+    """
+
     with st.expander(title, expanded=False):
         with st.form("register_main_form"):
             col1, col2 = st.columns(2)
@@ -792,8 +886,14 @@ def register_main(title: str = "Register as manager"):
             finally:
                 conn.close()
 
-### Input window to change user data in users.db ###
 def edit_own_profile(title: str = "My profile"):
+    """Form in Streamlit to edit own user profile.
+     Args:
+        title (str): The title of the form.
+
+    Returns:
+        None
+    """
     if "username" not in st.session_state or "user_ID" not in st.session_state:
         st.warning("Log in first.")
         return
@@ -815,7 +915,7 @@ def edit_own_profile(title: str = "My profile"):
             return
 
         original_username, original_email, stored_pw, original_role = row
-        st.session_state["username"] = original_username #check weather session-state is at current
+        st.session_state["username"] = original_username #check wether session-state is at current
 
     except Exception as e:
         st.error(f"Error fetching user data: {e}")
@@ -869,20 +969,21 @@ def edit_own_profile(title: str = "My profile"):
         finally:
             conn.close()
 
-    #if new_username != username:
-        #st.session_state["username"] = new_username
 
-    #st.success("Profile has been updated")
-    #time.sleep(2)
-    #st.rerun()
 
-### Creates table for admin dashboard to see all registered managers/users ###
 def get_users_under_me() -> pd.DataFrame | None:
+    """Creates table for admin dashboard to see all registered managers/users.
+    Args:
+        None
+
+    Returns:
+        pd.DataFrame;  None: DataFrame containing user data if found, else None.
+    """
     if "role_sortkey" not in st.session_state:
         return None
 
     current = st.session_state["role_sortkey"]
-    conn = connect() # Stellt die pyodbc-Verbindung her
+    conn = connect()
     if not conn:
         return None 
 
@@ -895,21 +996,14 @@ def get_users_under_me() -> pd.DataFrame | None:
             ORDER BY r.sortkey DESC, u.username
         """
         
-        # NUTZT pd.read_sql: Liest die Daten direkt von der DB in den DataFrame
+        # uses pandas to read the sql query into a DataFrame
         df = pd.read_sql(
             sql_query, 
             conn, 
-            params=(current,) # Parameter (der aktuelle sortkey) als Tupel übergeben
+            params=(current,) # params as tuple
         )
-
-        # Erstelle den DataFrame nur, wenn `rows` nicht leer ist
         if not df.empty:
             return df
-        #else:
-            #return pd.DataFrame(columns=["username", "email", "role", "sortkey", "manager_ID"])
 
     finally:
         conn.close()
-    #conn.close()
-
-    #return pd.DataFrame(rows, columns=["username", "email", "role", "sortkey", "manager_ID"])
