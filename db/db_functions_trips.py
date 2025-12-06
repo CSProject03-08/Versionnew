@@ -1,3 +1,7 @@
+"""db_function_trips.py defines the necessary functions to manage the trips, including createion of tables,
+fetching trips for the current manager, adding and deleting trips as well as creating the dropdowns.
+Those are the functions which are primerily called in the managers_overview.py"""
+
 import pyodbc
 import time
 import streamlit as st
@@ -8,11 +12,13 @@ from geopy.distance import geodesic
 from ml.ml_model import load_model
 from api.api_transportation import transportation_managerview
 
+### pulling crucial access infromation from streamlit secrets file ###
 SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
 DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
 USERNAME = st.secrets["azure_db"]["USERNAME"]
 PASSWORD = st.secrets["azure_db"]["PASSWORD"]
 
+### creating connection object referring to the MS Azure database ###
 CONNECTION_STRING = (
     'DRIVER={ODBC Driver 17 for SQL Server};'
     f'SERVER={SERVER_NAME};'
@@ -23,21 +29,35 @@ CONNECTION_STRING = (
     'TrustServerCertificate=no;'
 )
 
-### Connecting to the database ###
+
 def connect():
-    """Connects to Azure SQL-Datenbank"""
+    """Connects to Azure SQL-database.
+    
+    Args:
+        None
+        
+    Returns:
+        None
+    """
     try:
         conn = pyodbc.connect(CONNECTION_STRING)
         return conn
-    except pyodbc.Error as ex:
+    except pyodbc.Error as ex: # raises error in case the connection is not possible
         sqlstate = ex.args[0]
-        # show the error
         st.error(f"Connection error: {sqlstate}")
         return None
 
 
-### Creating necessary tables for trips ###
 def create_trip_table():
+    """This function creates the 'trips' table in the database if it doesn't exists already
+    with all necessary columns.
+    
+    Args:
+        None
+        
+    Returns:
+        None
+    """
     conn = connect()
     if conn is None:
         return
@@ -45,7 +65,7 @@ def create_trip_table():
     c = conn.cursor()
     try:
         c.execute("""
-            IF OBJECT_ID('trips', 'U') IS NULL
+            IF OBJECT_ID('trips', 'U') IS NULL 
             BEGIN
                 CREATE TABLE trips (
                     trip_ID INT PRIMARY KEY IDENTITY(1,1), -- NOT NULL entfernt, da PK implizit NOT NULL ist
@@ -69,15 +89,25 @@ def create_trip_table():
     finally:
         conn.close()
 
+
 def create_trip_users_table():
+    """This function creates the 'user_trips' table in the database if it doesn't exists already.
+    This table connects the 'trips' and the 'users' table in the databse. It ensures that multiple
+    people can be assigned to different trips. Each user_ID, trip_ID combination is unique. It
+    further creates indices for enhanced fetching speed if the database once get fuller.
+    
+    Args:
+        None
+        
+    Returns:
+        None
+    """
     conn = connect()
     if conn is None:
         return
 
     c = conn.cursor()
-    
     try:
-        # Existenzprüfung für 'user_trips'
         c.execute("""
             IF OBJECT_ID('user_trips', 'U') IS NULL
             BEGIN
@@ -93,11 +123,11 @@ def create_trip_users_table():
         """)
         conn.commit()
     except Exception as e:
+        conn.rollback()
         st.error(f"Failed to create table 'user_trips': {e}")
         conn.close()
         return
 
-    # creates index only if not exists
     try:
         c.execute("""
             IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'ix_user_trips_trip' AND object_id = OBJECT_ID('user_trips'))
@@ -114,51 +144,33 @@ def create_trip_users_table():
         """)
         conn.commit()
     except Exception as e:
+        conn.rollback()
         st.error(f"Failed to create indexes for 'user_trips': {e}")
         
     finally:
         conn.close()
 
-####not used yet#### probably not necessary
-def create_manager_trip_table():
-    conn = connect()
-    conn.execute("PRAGMA foreign_keys = ON;")
-    c = conn.cursor()
-    c.execute("""
-    CREATE TABLE IF NOT EXISTS manager_trips (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        manager_ID INTEGER NOT NULL,
-                        trip_ID NOT NULL
-                        UNIQUE (manager_ID, trip_ID),
-                        FOREIGN KEY(manager_ID) REFERENCES users(manager_ID) ON DELETE CASCADE,
-                        FOREIGN KEY(trip_ID) REFERENCES trips(trip_ID) ON DELETE CASCADE
-    ) 
-    """)
-    conn.commit()
-    conn.close()
-
-####not used yet#### probably not necessary
-def get_trips_for_current_manager():
-    if "user_ID" not in st.session_state:
-        return []
-
-    manager_id = int(st.session_state["user_ID"])
-
-    conn = connect()
-    c = conn.cursor()
-    c.execute("""
-        SELECT destination, start_date, end_date, occasion
-        FROM trips t
-        JOIN manager_trips m
-        ON t.trip_ID = m.trip_ID
-        WHERE manager_ID = ?
-        ORDER BY start_date
-    """, (manager_id,))
-    rows = c.fetchall()
-    conn.close()
-    return rows
 
 def add_trip(origin, destination, start_date, end_date, start_time_str, end_time_str, occasion, manager_ID, user_ids, method_transport:int):
+    """This function creates the trip in the database and inserts into the user_trips table the unique
+    combination of user_ID and trip_ID.
+    
+    Args:
+        origin (NVARCHAR(255)): The origin of the journey
+        destination (NVARCHAR(255)): The destination of the journey
+        start_date (DATE): The start date of the journey
+        end_date (DATE): The end date of the journey
+        start_time_str (TIME): The start time of the journey
+        end_time_str (TIME): The end time of the journey
+        occasion (NVARCHAR(MAX)): The reason of the journey or additional information
+        manager_ID (INT): The ID of the manager who creates the trip for his list (gets overwritten with the sessionstate)
+        user_ids (list): A list of employee_IDs who participate
+        method_transport (int): The chosen transport type by the manager (as 0 or 1)
+        
+    Returns:
+        None
+        
+    """
     conn = connect()
     if conn is None:
         return
@@ -169,26 +181,35 @@ def add_trip(origin, destination, start_date, end_date, start_time_str, end_time
 
         c.execute(
             "INSERT INTO trips (origin, destination, start_date, end_date, start_time, end_time, occasion, manager_ID, method_transport) "
-            "OUTPUT INSERTED.trip_ID "  # Azure mechanism to return the latest trip_ID
+            "OUTPUT INSERTED.trip_ID "  # Azure query to return the latest trip_ID
             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (origin, destination, start_date, end_date, start_time_str, end_time_str, occasion, manager_ID, method_transport)
         )
         
         if user_ids:
-            # replaces c.lastrowid from Sqlite
-            trip_ID = c.fetchone()[0]
+            trip_ID = c.fetchone()[0] # equivalent of c.lastrowid from Sqlite
 
-            user_trips_list = [(trip_ID, user_ID) for user_ID in user_ids]
+            user_trips_list = [(trip_ID, user_ID) for user_ID in user_ids] # creates list of tuples for 'user_trips' table
             c.executemany("INSERT INTO user_trips (trip_ID, user_ID) VALUES (?, ?)", user_trips_list)
             
         conn.commit()
     except Exception as e:
-        conn.rollback() # often used with pyodbc
+        conn.rollback()
         st.error(f"Unable to add the trip: {e}")
     finally:
         conn.close()
 
+
 def del_trip(deleted_tripID: int):
+    """This function deletes the trip with the given trip_ID and deletes on cascade all user_ID, trip_ID tuples
+    which inherit the provided trip_ID
+    
+    Args:
+        deleted_tripID (int): The trip_ID of the trip who should be deleted
+        
+    Returns:
+        None
+    """
     conn = connect()
     if conn is None:
         return
@@ -196,13 +217,13 @@ def del_trip(deleted_tripID: int):
     c = conn.cursor()
     try:
         c.execute(
-            "DELETE FROM user_trips WHERE trip_ID = ?",
+            "DELETE FROM trips WHERE trip_ID = ?",
             (deleted_tripID,)
         )
         
         # not necessary because of ON DELETE CASCADE but for backup reasons left
         c.execute(
-            "DELETE FROM trips WHERE trip_ID = ?",
+            "DELETE FROM user_trips WHERE trip_ID = ?",
             (deleted_tripID,)
         )
         
@@ -213,7 +234,16 @@ def del_trip(deleted_tripID: int):
     finally:
         conn.close()
 
-def create_trip_dropdown(title: str = "Create new trip"):
+
+def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7.12 ###
+    """This function creates the expander with the form for the creation of a new trip.
+    
+    Args:
+        None
+    
+    Returns:
+        None
+    """
     with st.expander(title, expanded=False):
 
         # ----------------------------------------------------
@@ -238,6 +268,7 @@ def create_trip_dropdown(title: str = "Create new trip"):
             conn = connect()
             if conn is None:
                 return
+            
             user_df = pd.read_sql_query("""SELECT u.user_ID, u.username FROM users u 
                                         JOIN roles r ON u.role = r.role 
                                         WHERE r.sortkey < 3
@@ -279,7 +310,7 @@ def create_trip_dropdown(title: str = "Create new trip"):
 
             if not comparison_ready:
                 st.caption(
-                    "🔒 Choose a transportation option after entering the API key and updating the comparison."
+                    "Choose a transportation option after entering the API key and updating the comparison."
                 )
 
             invite_clicked = st.form_submit_button("Invite")
@@ -296,7 +327,16 @@ def create_trip_dropdown(title: str = "Create new trip"):
                     time.sleep(2)
                     st.rerun()
 
+
 def del_trip_dropdown(title: str = "Delete trip"):
+    """This function creates the expander with the form to delete a trip.
+    
+    Args:
+        None
+        
+    Returns:
+        None
+    """
     with st.expander(title, expanded=False):
         with st.form("Delete a trip", clear_on_submit=True):
             deleted_tripID = st.text_input("Delete trip")
@@ -313,15 +353,30 @@ def del_trip_dropdown(title: str = "Delete trip"):
                     else:
                         del_trip(deleted_tripID)
                         st.success("Trip deleted!")
-                        time.sleep(0.5)
+                        time.sleep(2)
                         st.rerun()
 
-#trip table overview
+
 def trip_list_view():
+    """This function creates the current list view of false expnaded trips for the manager.
+    If expanded all the necessary information i.e. occasion, start and end date, start and
+    end time as well as a dataframe with the assigned employees and the cost forecast are 
+    displayed. As a small feature the assigned employees and the occasion can be edited at
+    every stage. The trips are filtered by the manager_ID which is found in the session_state.
+    
+    Args:
+        None
+        
+    Returns:
+        None
+    """
     conn = connect()
     if conn is None:
         return
-    manager_ID = int(st.session_state["user_ID"])
+    
+    manager_ID = int(st.session_state["user_ID"]) # getting the parameter for the query
+
+    # dataframe only for trips whos end dates aren't in the past
     trip_df = pd.read_sql_query("""
         SELECT trip_ID, origin, destination, start_date, end_date, start_time, end_time, occasion
         FROM trips
@@ -336,8 +391,7 @@ def trip_list_view():
         st.info("No trips available.")
         return
 
-    #loop all trips
-    for _, row in trip_df.iterrows():
+    for _, row in trip_df.iterrows(): # loop all trips to create the expander
         with st.expander(
             f"{row.trip_ID} — {row.origin} → {row.destination} ({row.start_date} → {row.end_date})",
             expanded=False
@@ -360,9 +414,11 @@ def trip_list_view():
             """, conn, params=(row.trip_ID,))
             conn.close()
 
+            # display the dataframe with the participants
             st.markdown("**Participants:**")
             st.dataframe(participants, hide_index=True, use_container_width=True)
 
+            # ML model for the cost forecast
             num_participants = len(participants)
 
             model = load_model()
@@ -410,7 +466,7 @@ def trip_list_view():
                     "the model will be able to predict costs."
                 )
 
-            #edit occasion
+            # edit the occasion of the trip
             with st.form(f"edit_trip_{row.trip_ID}"):
                 new_occasion = st.text_input("Edit occasion", value=row.occasion)
                 submitted = st.form_submit_button("Save changes")
@@ -423,22 +479,23 @@ def trip_list_view():
                     conn.commit()
                     conn.close()
                     st.success("Occasion updated!")
-                    time.sleep(0.5)
+                    time.sleep(2)
                     st.rerun()
             
+            # edit participants of the trip
             with st.form(f"edit_participants_{row.trip_ID}"):
                 st.write("Manage participants")
 
-                #load participants to edit them
+                # load all participants to edit them for options afterwards
                 conn = connect()
                 all_users_df = pd.read_sql_query("""SELECT u.user_ID, u.username FROM users u 
                     WHERE u.manager_ID = ? 
                     ORDER BY username
-                """, conn, params=(int(st.session_state["user_ID"]),),
+                """, conn, params=(manager_ID,),
                 )
                 conn.close()
 
-                #load current participants from db
+                # load participants from this trip for default value afterwards
                 conn = connect()
                 current_df = pd.read_sql_query("""
                     SELECT u.user_ID, u.username
@@ -446,29 +503,29 @@ def trip_list_view():
                     JOIN user_trips ut ON ut.user_ID = u.user_ID
                     WHERE ut.trip_ID = ?
                     AND u.manager_ID = ?
-                """, conn, params=(row.trip_ID, int(st.session_state["user_ID"]),), 
+                """, conn, params=(row.trip_ID, manager_ID), 
                 )
                 conn.close()
 
-                #multiselect to choose from
+                # multiselect to choose from
                 selected_users = st.multiselect(
                     "Select participants",
                     options=all_users_df["user_ID"].tolist(),
                     default=current_df["user_ID"].tolist(),
-                    format_func=lambda uid: all_users_df.loc[all_users_df["user_ID"] == uid, "username"].values[0]
+                    format_func=lambda uid: all_users_df.loc[all_users_df["user_ID"] == uid, "username"].values[0] # filters only usernames to display in the multiselect
                 )
 
-                #submit button
+                # form submit button to update
                 update_participants = st.form_submit_button("Update participants")
 
                 if update_participants:
                     conn = connect()
                     c = conn.cursor()
 
-                    #delete old connection
+                    # delete all participants from the trip
                     c.execute("DELETE FROM user_trips WHERE trip_ID = ?", (row.trip_ID,))
 
-                    #create new connection
+                    # adds all new participants to the trip
                     user_trips_list = [(row.trip_ID, uid) for uid in selected_users]
                     try:
                         c.executemany(
@@ -484,17 +541,31 @@ def trip_list_view():
                     finally:
                         conn.close()
                         if 'st.error' not in st.session_state:
-                            time.sleep(0.5)
+                            time.sleep(2)
                             st.rerun()
 
-def past_trip_list_view():
 
+def past_trip_list_view():
+    """This function lists as the function above the trip details. However, this time
+    only past trips are displayed without the option to edit those trips or to have a
+    cost forecast. There is the option to archive them by clicking on the foreseen 
+    button. This will not delete the trips, instead they will just no longer be visible.
+    
+    Args:
+        None
+        
+    Returns:
+        None
+    """
     st.subheader("Past trips")
 
     conn = connect()
     if conn is None:
         return
+    
     manager_ID = int(st.session_state["user_ID"])
+
+    # dataframe only for trips whos end dates are in the past
     trip_df = pd.read_sql_query("""
         SELECT trip_ID, origin, destination, start_date, end_date, start_time, end_time, occasion
         FROM trips
@@ -509,20 +580,20 @@ def past_trip_list_view():
         st.info("No trips available.")
         return
 
-    #loop all trips
+    # loop all trips for the expander
     for _, row in trip_df.iterrows():
         with st.expander(
             f"{row.trip_ID} — {row.origin} → {row.destination} ({row.start_date} → {row.end_date})",
             expanded=False
         ):
-            #list details
+            # list details
             st.write("**Occasion:**", row.occasion)
             st.write("**Start Date:**", row.start_date)
             st.write("**End Date:**", row.end_date)
             st.write("**Start Time:**", row.start_time)
             st.write("**End Time:**", row.end_time)
 
-            #load participants into table
+            # load participants into table
             conn = connect()
             participants = pd.read_sql_query("""
                 SELECT u.username, u.email
@@ -536,6 +607,7 @@ def past_trip_list_view():
             st.markdown("**Participants:**")
             st.dataframe(participants, hide_index=True, use_container_width=True)
 
+    # form to archive the trips
     with st.form("Archive past trips"):
         archived = st.form_submit_button("Archive past trips")
 
@@ -543,8 +615,9 @@ def past_trip_list_view():
             conn = connect()
             if conn is None:
                 return
+            
             c = conn.cursor()
-            manager_ID = int(st.session_state["user_ID"])
+            # by setting the show_trip_m varible to 0 those trips won't be displayed any longer
             c.execute("""UPDATE trips SET show_trip_m = 0
                 WHERE manager_id = ?
                 AND CAST(GETDATE() AS DATE) > end_date
@@ -552,14 +625,24 @@ def past_trip_list_view():
             conn.commit()
             conn.close()
             st.success("Archived past trips!")
-            time.sleep(0.5)
+            time.sleep(2)
             st.rerun()
 
+
 def del_trip_forever():
-         
+    """This fuction finally deletes tripa automatically after 365 days. As acces increases
+    this number should be adjusted accordingly.
+    
+    Args:
+        None
+        
+    Returns:
+        None
+    """
     conn = connect()
     if conn is None:
         return
+    
     c = conn.cursor()
     manager_ID = int(st.session_state["user_ID"])
     try:
