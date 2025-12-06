@@ -9,6 +9,7 @@ from datetime import date
 from geopy.distance import geodesic
 from api.weather import weather_widget
 from api.api_transportation import show_transportation_details
+from dij_weather import show_trip_weather
 
 SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
 DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
@@ -85,7 +86,11 @@ def employee_listview():
     if trip_df.empty:
         st.info("No trips assigned yet.")
         return
-    
+    show_trip_weather(
+        destination=row.destination,
+        start_date=row.start_date,
+        end_date=row.end_date,
+    )
     # ---- init expense wizard state once ----
     if "expense_wizard" not in st.session_state:
         st.session_state.expense_wizard = {
