@@ -244,9 +244,9 @@ def clear_trip_form_manual():
         st.session_state["trip_occasion"] = ""
         st.session_state["trip_users"] = []
         st.session_state["transport_comparison_done"] = False
-        st.success("Data cleared!")
+        st.success("Invited and data cleared!")
         time.sleep(2)
-        st.rerun()
+        return
 
     else:
         raise SyntaxError
