@@ -235,6 +235,23 @@ def del_trip(deleted_tripID: int):
         conn.close()
 
 
+def clear_trip_form_manual():
+    """Deletes manually session state inputs after invite."""
+
+    if st.session_state["trip_origin"] not in "":
+        st.session_state["trip_origin"] = ""
+        st.session_state["trip_destination"] = ""
+        st.session_state["trip_occasion"] = ""
+        st.session_state["trip_users"] = []
+        st.session_state["transport_comparison_done"] = False
+        st.success("Trip saved! Data cleared.")
+        time.sleep(2)
+        st.rerun()
+
+    else:
+        raise SyntaxError
+
+
 def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7.12 ###
     """This function creates the expander with the form for the creation of a new trip.
     
@@ -266,15 +283,6 @@ def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7
                  st.session_state[key] = "Car"
             else:
                  st.session_state[key] = ""
-
-    def _clear_trip_form_manual():
-        """Löscht manuell die Werte im Session State nach erfolgreichem Invite."""
-        st.session_state["trip_origin"] = ""
-        st.session_state["trip_destination"] = ""
-        st.session_state["trip_occasion"] = ""
-        st.session_state["trip_users"] = []
-        # Setze den Vergleichsstatus zurück
-        st.session_state["transport_comparison_done"] = False
 
     with st.expander(title, expanded=False):
 
@@ -357,9 +365,7 @@ def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7
                 else:
                     add_trip(origin, destination, start_date, end_date, start_time_str, end_time_str, occasion, manager_ID, user_ids, method_transport)
                     st.success("Trip saved!")
-                    _clear_trip_form_manual()
-                    time.sleep(2)
-                    st.rerun()
+                    clear_trip_form_manual()
 
 
 def del_trip_dropdown(title: str = "Delete trip"):
