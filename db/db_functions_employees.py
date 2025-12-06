@@ -9,7 +9,7 @@ from datetime import date
 from geopy.distance import geodesic
 from api.weather import weather_widget
 from api.api_transportation import show_transportation_details
-from dij_weather import show_trip_weather
+from api.dij_weather import show_trip_weather
 
 SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
 DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
