@@ -28,6 +28,17 @@ def connect():
         return None
 
 def insert_expense_for_training(dest_city, distance_km, duration_days, total_cost, user_id):
+    """Inserts an expense report into the expenses_user_data table.
+    Args:
+        dest_city (str): Destination city of the trip.
+        distance_km (float): Distance traveled in kilometers.
+        duration_days (int): Duration of the trip in days.
+        total_cost (float): Total cost of the trip.
+        user_id (int): ID of the user submitting the expense report.
+    Returns:
+        bool: True if the insertion was successful, False otherwise.
+    """
+    
     conn = connect()
     try:
         c = conn.cursor()
@@ -56,7 +67,7 @@ def insert_expense_for_training(dest_city, distance_km, duration_days, total_cos
         return False
 
     finally:
-        # 6. Verbindung IMMER schließen
+        # always close the connection
         if conn:
             try:
                 conn.close()
