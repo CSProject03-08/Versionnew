@@ -1,3 +1,5 @@
+"""db_function_employees.py defines the necessary functions, mainly used in the user_overview.py. Most of the take the data from users.db and show/visualize it."""
+
 import pyodbc
 import time
 import streamlit as st
@@ -27,7 +29,14 @@ CONNECTION_STRING = (
 )
 
 def connect():
-    """Connects to Azure SQL-database"""
+    """Connects to Azure SQL-database.
+    
+    Args:
+        None
+        
+    Returns:
+        None
+    """
     try:
         conn = pyodbc.connect(CONNECTION_STRING)
         return conn
@@ -39,8 +48,11 @@ def connect():
 
 def employee_listview():
     """
-    Returns all trips assigned to a given user (employee)
-    using the user_trips mapping table.
+    Returns all trips assigned to a given user (employee) using the user_trips mapping table.
+    Args:
+        None
+    Returns:
+        None
     """
     if "user_ID" not in st.session_state:
         st.warning("Please log in to see your trips.")
@@ -168,9 +180,13 @@ def employee_listview():
 
 def past_trip_view_employee():
     """
-    Returns all trips assigned to a given user (employee)
-    using the user_trips mapping table and (for past trips)
-    allows submitting an expense report via a wizard.
+    Returns all past trips assigned to a given user (employee) using the user_trips mapping table. Also adds the expense report wizard.
+    
+    Args:
+        None
+
+    Returns:
+        None, adding data to the db.
     """
     st.subheader("Past trips")
 
