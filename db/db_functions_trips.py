@@ -11,7 +11,7 @@ from api.api_city_lookup import get_city_coords
 from geopy.distance import geodesic
 from ml.ml_model import load_model
 from api.api_transportation import transportation_managerview
-from create_trip_dropdown_transportation import compare_transport_method
+from create_trip_dropdown_transport import compare_transport_method
 
 ### pulling crucial access infromation from streamlit secrets file ###
 SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
