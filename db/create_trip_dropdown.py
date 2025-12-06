@@ -41,7 +41,14 @@ def connect():
         return None
 
 def clear_trip_form_manual():
-    """Deletes manually session state inputs after invite."""
+    """Clears the trip creation form and adds the trip to the database if the origin is not empty.
+
+    Args:
+        None
+
+    Returns:
+        None
+    """
 
     if st.session_state["trip_origin"] not in "":
         add_trip(origin, destination, start_date, end_date, start_time_str, end_time_str, occasion, manager_ID, user_ids, method_transport)
@@ -78,7 +85,7 @@ def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7
 
     for key in keys_to_init:
         if key not in st.session_state:
-            # Setze sinnvolle Startwerte für die Keys
+            # sets default values for date, time, list and transport method
             if "date" in key:
                  st.session_state[key] = pd.to_datetime("today").date()
             elif "time" in key:
@@ -94,9 +101,7 @@ def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7
 
         global method_transport
 
-        # ----------------------------------------------------
-        # TRIP FORM: details → users → API key → comparison → transport choice → invite
-        # ----------------------------------------------------
+        # Trip Form: details => users => API key => comparison => transport choice => invite
         method_transport = 0  # Default: 0 = Car, 1 = Public transport
 
         with st.form("Create a trip", clear_on_submit=False):
@@ -139,7 +144,7 @@ def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7
             selected = st.multiselect("Assign users", options=options, format_func=lambda x: x[1], key="trip_users")
             user_ids = [opt[0] for opt in selected]
 
-            # 2) API-Key und Vergleich
+            # 2) API-Key and comparison
             st.markdown("---")
             st.subheader("Method of Transport")
 
@@ -155,7 +160,7 @@ def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7
                     st.session_state["transport_comparison_done"] = False
 
             comparison_ready = st.session_state.get("transport_comparison_done", False)
-            # 3) Auswahl der bevorzugten Transportmethode (zuerst ausgegraut)
+            # 3) Transport choice
             transport_method = st.selectbox(
                 "Preferred transportation",
                 ["Car", "Public transport"],
