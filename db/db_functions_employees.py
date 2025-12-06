@@ -86,11 +86,7 @@ def employee_listview():
     if trip_df.empty:
         st.info("No trips assigned yet.")
         return
-    show_trip_weather(
-        destination=row.destination,
-        start_date=row.start_date,
-        end_date=row.end_date,
-    )
+
     # ---- init expense wizard state once ----
     if "expense_wizard" not in st.session_state:
         st.session_state.expense_wizard = {
@@ -164,7 +160,11 @@ def employee_listview():
 )
 
                 st.subheader("Weather Forecast for your trips")
-                weather_widget(st.session_state["user_ID"])
+                show_trip_weather(
+                    destination=row.destination,
+                    start_date=row.start_date,
+                    end_date=row.end_date,
+                )
 
 def past_trip_view_employee():
     """
