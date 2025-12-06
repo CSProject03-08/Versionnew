@@ -11,7 +11,6 @@ from api.api_city_lookup import get_city_coords
 from geopy.distance import geodesic
 from ml.ml_model import load_model
 from api.api_transportation import transportation_managerview
-from db.create_trip_dropdown_transport import compare_transport_method
 
 ### pulling crucial access infromation from streamlit secrets file ###
 SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
@@ -283,7 +282,36 @@ def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7
             selected = st.multiselect("Assign users", options=options, format_func=lambda x: x[1])
             user_ids = [opt[0] for opt in selected]
 
-            compare_transport_method(origin, destination)
+            # 2) API-Key und Vergleich
+            st.markdown("---")
+            st.subheader("Method of Transport")
+
+            api_key = st.secrets["GOOGLE_API_KEY"]
+
+            compare_clicked = st.form_submit_button("Do the comparison")
+
+            if compare_clicked and origin and destination:
+                st.session_state["transport_comparison_done"] = True
+                transportation_managerview(origin, destination, api_key)
+            else:
+                if "transport_comparison_done" not in st.session_state:
+                    st.session_state["transport_comparison_done"] = False
+
+            comparison_ready = st.session_state.get("transport_comparison_done", False)
+            # 3) Auswahl der bevorzugten Transportmethode (zuerst ausgegraut)
+            transport_method = st.selectbox(
+                "Preferred transportation",
+                ["Car", "Public transport"],
+                disabled=not comparison_ready,
+            )
+
+            if comparison_ready:
+                method_transport = 0 if transport_method == "Car" else 1
+
+            if not comparison_ready:
+                st.caption(
+                    "Choose a transportation option after entering the API key and updating the comparison."
+                )
 
             invite_clicked = st.form_submit_button("Invite")
 
