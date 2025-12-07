@@ -32,7 +32,6 @@ create_tables()
 initialize_data()
 # add dummies to user.db if they do not exist
 def create_first_users():
-    conn = connect()
     ckeck_users_df = pd.read_sql_query("""
         SELECT username FROM users 
         WHERE username = ? OR username = ? OR username = ?
