@@ -323,7 +323,7 @@ def trip_list_view():
 
             # display the dataframe with the participants
             st.markdown("**Participants:**")
-            st.dataframe(participants, hide_index=True, width="stretched")
+            st.dataframe(participants, hide_index=True, width="stretch")
 
             # ML model for the cost forecast
             num_participants = len(participants)
@@ -512,7 +512,7 @@ def past_trip_list_view():
             conn.close()
 
             st.markdown("**Participants:**")
-            st.dataframe(participants, hide_index=True, width="stretched")
+            st.dataframe(participants, hide_index=True, width="stretch")
 
     # form to archive the trips
     with st.form("Archive past trips"):
