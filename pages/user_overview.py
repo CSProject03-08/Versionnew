@@ -4,6 +4,7 @@ imported from db_functions_users.py or db_functions_employees.py."""
 import streamlit as st
 from db.db_functions_users import edit_own_profile
 from db.db_functions_employees import employee_listview, past_trip_view_employee
+from api.News import news_widget
 
 st.set_page_config(page_title="User Dashboard", layout="wide")
 st.title("User Dashboard")

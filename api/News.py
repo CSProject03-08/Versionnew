@@ -1,9 +1,7 @@
+import sqlite3
 import streamlit as st
 import requests
-import json
 from pathlib import Path
-import sqlite3
-import streamlit.components.v1 as components
 
 # --- Database connection ---
 DB_PATH = Path(__file__).parent.parent / "db" / "users.db"
@@ -11,10 +9,15 @@ DB_PATH = Path(__file__).parent.parent / "db" / "users.db"
 def connect():
     return sqlite3.connect(DB_PATH)
 
-# --- Helper to fetch upcoming trips for the logged-in user ---
+
+# --- Fetch upcoming trips for logged-in user ---
 def get_upcoming_trips_for_user():
+    if "user_ID" not in st.session_state:
+        return []
+
     user_id = int(st.session_state["user_ID"])
     conn = connect()
+
     query = """
         SELECT t.trip_ID, t.origin, t.destination, t.start_date, t.end_date
         FROM trips t
@@ -23,14 +26,27 @@ def get_upcoming_trips_for_user():
           AND t.end_date >= DATE('now')
         ORDER BY t.start_date ASC
     """
+
     rows = conn.execute(query, (user_id,)).fetchall()
-    columns = [col[0] for col in conn.execute("PRAGMA table_info(trips)").fetchall()]
     conn.close()
-    return [dict(zip(columns, row)) for row in rows]
+
+    # Convert rows to list of dicts
+    return [
+        {
+            "trip_ID": r[0],
+            "origin": r[1],
+            "destination": r[2],
+            "start_date": r[3],
+            "end_date": r[4],
+        }
+        for r in rows
+    ]
+
 
 # --- Fetch news from Mediastack API ---
 def fetch_news_for_city(city_name: str):
-    API_KEY = "ad63614ff90fc6ae7308e5cb4c0796d0"  # <-- replace with your key
+    API_KEY = "ad63614ff90fc6ae7308e5cb4c0796d0"  # <-- your key
+
     url = "http://api.mediastack.com/v1/news"
     params = {
         "access_key": API_KEY,
@@ -40,73 +56,58 @@ def fetch_news_for_city(city_name: str):
         "sort": "published_desc",
         "limit": 5
     }
+
     try:
         resp = requests.get(url, params=params)
         data = resp.json()
-        if "data" not in data or len(data["data"]) == 0:
+
+        if "data" not in data or not data["data"]:
             return []
+
         return data["data"]
+
     except Exception as e:
         st.error(f"Error fetching news: {e}")
         return []
 
-# --- News carousel component ---
-def news_carousel(articles, city_name):
-    articles_json = json.dumps(articles)
-    html_code = f"""
-    <div id="carousel-container" style="width: 100%; border: 1px solid #ccc; padding: 20px; border-radius: 12px; background: #f9f9f9; font-family: Arial;">
-        <h3 style="text-align: center; margin-top: 0;">📰 Regional News from {city_name}</h3>
-        <div id="news-content" style="min-height: 150px; margin-bottom: 20px; text-align: left;"></div>
-        <div style="display: flex; justify-content: space-between;">
-            <button id="prev" style="padding: 8px 14px; border-radius: 6px; border: none; background: #ddd; cursor: pointer;">◀ Previous</button>
-            <button id="next" style="padding: 8px 14px; border-radius: 6px; border: none; background: #ddd; cursor: pointer;">Next ▶</button>
-        </div>
-    </div>
-    <script>
-        const articles = {articles_json};
-        let index = 0;
-        function renderArticle() {{
-            const a = articles[index];
-            document.getElementById("news-content").innerHTML = `
-                <h4>${{a.title}}</h4>
-                <p><strong>Source:</strong> ${{a.source || "Unknown"}}</p>
-                <p>${{a.description || ""}}</p>
-                <a href="${{a.url}}" target="_blank">Read full article</a>
-            `;
-        }}
-        document.getElementById("prev").onclick = function() {{
-            index = (index - 1 + articles.length) % articles.length;
-            renderArticle();
-        }};
-        document.getElementById("next").onclick = function() {{
-            index = (index + 1) % articles.length;
-            renderArticle();
-        }};
-        setInterval(function() {{
-            index = (index + 1) % articles.length;
-            renderArticle();
-        }}, 5000);
-        renderArticle();
-    </script>
-    """
-    components.html(html_code, height=350)
 
-# --- Main news widget for all trips ---
+# --- Display simple list-style news widget ---
+def display_news_list(articles, city_name):
+    st.subheader(f"📰 News for your trip to {city_name}")
+
+    for article in articles:
+        st.markdown(f"### {article.get('title', 'No title')}")
+        st.write(article.get("description", "No description available."))
+        st.write(f"**Source:** {article.get('source', 'Unknown')}")
+        st.markdown(f"[Read full article]({article.get('url', '#')})")
+        st.markdown("---")
+
+
+# --- MAIN WIDGET: Works exactly like the weather widget ---
 def news_widget():
     """
-    Loops through all upcoming trips for the logged-in user
-    and displays a news carousel for each trip destination.
+    Automatically loops through all upcoming user trips
+    and shows news for each destination.
+    Works exactly like your weather widget.
     """
-    upcoming_trips = get_upcoming_trips_for_user()
-    if not upcoming_trips:
+
+    trips = get_upcoming_trips_for_user()
+
+    if not trips:
         st.info("No upcoming trips found.")
         return
 
-    for trip in upcoming_trips:
-        city_name = trip["destination"]
-        articles = fetch_news_for_city(city_name)
+    for trip in trips:
+        city = trip["destination"]
+
+        st.markdown(f"### ✈ Destination: **{city}**")
+
+        articles = fetch_news_for_city(city)
+
         if not articles:
-            st.info(f"No news found for {city_name}.")
+            st.info(f"No news found for {city}.")
+            st.markdown("---")
             continue
-        st.subheader(f"📰 News for your trip to {city_name}")
-        news_carousel(articles, city_name)
+
+        display_news_list(articles, city)
+        st.markdown("---")
