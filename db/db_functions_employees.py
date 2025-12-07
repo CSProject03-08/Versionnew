@@ -13,9 +13,14 @@ from geopy.distance import geodesic
 from api.api_transportation import show_transportation_details
 from api.dij_weather import show_trip_weather
 from sqlalchemy import create_engine
+
+# The engine serves as a central gateway to the database (MS Azure SQL). 
+# It manages the connections and translates Python commands into the appropriate SQL dialect.
+# pandas requires this!
 DATABASE_URI = st.secrets["azure_db"]["ENGINE"]
 engine = create_engine(DATABASE_URI)
 
+# Fetching for all information in the st.secrets and defining the connection string for the normal connection where pandas is not involved
 SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
 DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
 USERNAME = st.secrets["azure_db"]["USERNAME"]

@@ -10,16 +10,19 @@ import pandas as pd
 from api.api_transportation import transportation_managerview
 from db.db_functions_trips import add_trip
 from sqlalchemy import create_engine
+
+# The engine serves as a central gateway to the database (MS Azure SQL). 
+# It manages the connections and translates Python commands into the appropriate SQL dialect.
+# pandas requires this!
 DATABASE_URI = st.secrets["azure_db"]["ENGINE"]
 engine = create_engine(DATABASE_URI)
 
-### pulling crucial access infromation from streamlit secrets file ###
+# Fetching for all information in the st.secrets and defining the connection string for the normal connection where pandas is not involved
 SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
 DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
 USERNAME = st.secrets["azure_db"]["USERNAME"]
 PASSWORD = st.secrets["azure_db"]["PASSWORD"]
 
-### creating connection object referring to the MS Azure database ###
 CONNECTION_STRING = (
     'DRIVER={ODBC Driver 17 for SQL Server};'
     f'SERVER={SERVER_NAME};'

@@ -9,12 +9,18 @@ import pandas as pd
 import requests
 from sqlalchemy import create_engine
 
-#basic page settings
-st.set_page_config(page_title="Login", layout="centered", initial_sidebar_state="collapsed")
-st.title("Login")
-
+# The engine serves as a central gateway to the database (MS Azure SQL). 
+# It manages the connections and translates Python commands into the appropriate SQL dialect.
+# pandas requires this!
 DATABASE_URI = st.secrets["azure_db"]["ENGINE"]
 engine = create_engine(DATABASE_URI)
+
+# admin password from st.secrets
+ADMIN = st.secrets["dummy"]["ADMIN"]
+
+# basic page settings
+st.set_page_config(page_title="Login", layout="centered", initial_sidebar_state="collapsed")
+st.title("Login")
 
 ADMIN = st.secrets["dummy"]["ADMIN"]
 
