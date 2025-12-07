@@ -1,4 +1,4 @@
-# api/ap_city_lookup.py
+"""Api_city_lookup.py contains two functions who return the longitude and latitude of the provided city name."""
 
 import requests
 from typing import Optional, Tuple, Dict, Any
