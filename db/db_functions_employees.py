@@ -130,7 +130,7 @@ def employee_listview():
             expanded=is_active
         ):
             
-            c1, c2 = st.colums(2)
+            c1, c2 = st.columns(2)
             with c1:
                 st.write("**Occasion:**", row.occasion)
                 st.write("**Start Date:**", row.start_date)
