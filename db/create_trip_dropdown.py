@@ -1,3 +1,8 @@
+"""create_trip_dropdown.py was initially part of db_functions_trips.py but had to be moved in a seperate module
+because of the global variables. The file ensures that the comparison of the travel method could be done without
+loosing the inputs from the trip creation. Afterwards the sessionstate will be reseted. Doing this within one
+function is not allowed."""
+
 import pyodbc
 import time
 import streamlit as st
@@ -65,7 +70,7 @@ def clear_trip_form_manual():
         raise SyntaxError
 
 
-def create_trip_dropdown(title: str = "Create new trip"): ### to be adapted by 7.12 ###
+def create_trip_dropdown(title: str = "Create new trip"): 
     """This function creates the expander with the form for the creation of a new trip.
     
     Args:

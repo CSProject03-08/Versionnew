@@ -1,4 +1,4 @@
-"""db_function_employees.py defines the necessary functions, mainly used in the user_overview.py. Most of the take the data from users.db and show/visualize it."""
+"""db_function_employees.py defines the necessary functions, mainly used in the user_overview.py. Most of the functions take the data from users.db and show/visualize it."""
 
 import pyodbc
 import time
@@ -9,7 +9,7 @@ from ml.ml_model import retrain_model
 from db.expenses_user import insert_expense_for_training
 from datetime import date
 from geopy.distance import geodesic
-from api.weather import weather_widget
+#from api.weather import weather_widget
 from api.api_transportation import show_transportation_details
 from api.dij_weather import show_trip_weather
 
