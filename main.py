@@ -40,7 +40,7 @@ def create_first_users():
     )
 
     if len(ckeck_users_df) == 0:
-        add_user(ADMIN)
+        add_user("Admin", ADMIN, "a@gmail.com", "Administrator")
     else:
         pass
     
