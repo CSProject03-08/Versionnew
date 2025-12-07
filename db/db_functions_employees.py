@@ -4,7 +4,6 @@ import pyodbc
 import time
 import streamlit as st
 import pandas as pd
-from sqlalchemy import create_engine
 from api.api_city_lookup import get_city_coords
 from ml.ml_model import retrain_model
 from db.expenses_user import insert_expense_for_training
@@ -13,6 +12,9 @@ from geopy.distance import geodesic
 #from api.weather import weather_widget
 from api.api_transportation import show_transportation_details
 from api.dij_weather import show_trip_weather
+from sqlalchemy import create_engine
+DATABASE_URI = st.secrets["azure_db"]["ENGINE"]
+engine = create_engine(DATABASE_URI)
 
 SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
 DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
@@ -28,10 +30,6 @@ CONNECTION_STRING = (
     'Encrypt=yes;'  
     'TrustServerCertificate=no;'
 )
-
-DATABASE_URI = st.secrets["azure_db"]["ENGINE"]
-
-engine = create_engine(DATABASE_URI)
 
 def connect():
     """Connects to Azure SQL-database.

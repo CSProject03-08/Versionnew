@@ -6,6 +6,9 @@ import time
 import streamlit as st
 import pandas as pd
 import bcrypt
+from sqlalchemy import create_engine
+DATABASE_URI = st.secrets["azure_db"]["ENGINE"]
+engine = create_engine(DATABASE_URI)
 
 SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
 DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
@@ -997,9 +1000,9 @@ def get_users_under_me() -> pd.DataFrame | None:
         """
         
         # uses pandas to read the sql query into a DataFrame
-        df = pd.read_sql(
+        df = pd.read_sql_query(
             sql_query, 
-            conn, 
+            engine, 
             params=(current,) # params as tuple
         )
         if not df.empty:

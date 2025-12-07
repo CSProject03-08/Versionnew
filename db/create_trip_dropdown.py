@@ -9,6 +9,9 @@ import streamlit as st
 import pandas as pd
 from api.api_transportation import transportation_managerview
 from db.db_functions_trips import add_trip
+from sqlalchemy import create_engine
+DATABASE_URI = st.secrets["azure_db"]["ENGINE"]
+engine = create_engine(DATABASE_URI)
 
 ### pulling crucial access infromation from streamlit secrets file ###
 SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
@@ -141,7 +144,7 @@ def create_trip_dropdown(title: str = "Create new trip"):
                                         JOIN roles r ON u.role = r.role 
                                         WHERE r.sortkey < 3
                                         AND u.manager_ID = ? 
-                                        ORDER BY username""", conn, params=(manager_ID,),
+                                        ORDER BY username""", engine, params=(manager_ID,),
             )
             conn.close()
 

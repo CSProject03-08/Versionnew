@@ -11,6 +11,9 @@ from api.api_city_lookup import get_city_coords
 from geopy.distance import geodesic
 from ml.ml_model import load_model
 from api.api_transportation import transportation_managerview
+from sqlalchemy import create_engine
+DATABASE_URI = st.secrets["azure_db"]["ENGINE"]
+engine = create_engine(DATABASE_URI)
 
 ### pulling crucial access infromation from streamlit secrets file ###
 SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
@@ -291,7 +294,7 @@ def trip_list_view():
         AND CAST(GETDATE() AS DATE) <= end_date
         AND show_trip_m = 1
         ORDER BY start_date
-    """, conn, params=(manager_ID,))
+    """, engine, params=(manager_ID,))
     conn.close()
 
     if trip_df.empty:
@@ -318,7 +321,7 @@ def trip_list_view():
                 JOIN user_trips ut ON ut.user_ID = u.user_ID
                 WHERE ut.trip_ID = ?
                 ORDER BY u.username
-            """, conn, params=(row.trip_ID,))
+            """, engine, params=(row.trip_ID,))
             conn.close()
 
             # display the dataframe with the participants
@@ -398,7 +401,7 @@ def trip_list_view():
                 all_users_df = pd.read_sql_query("""SELECT u.user_ID, u.username FROM users u 
                     WHERE u.manager_ID = ? 
                     ORDER BY username
-                """, conn, params=(manager_ID,),
+                """, engine, params=(manager_ID,),
                 )
                 conn.close()
 
@@ -410,7 +413,7 @@ def trip_list_view():
                     JOIN user_trips ut ON ut.user_ID = u.user_ID
                     WHERE ut.trip_ID = ?
                     AND u.manager_ID = ?
-                """, conn, params=(row.trip_ID, manager_ID), 
+                """, engine, params=(row.trip_ID, manager_ID), 
                 )
                 conn.close()
 
@@ -480,7 +483,7 @@ def past_trip_list_view():
         AND CAST(GETDATE() AS DATE) > end_date
         AND show_trip_m = 1
         ORDER BY start_date
-    """, conn, params=(manager_ID,))
+    """, engine, params=(manager_ID,))
     conn.close()
 
     if trip_df.empty:
@@ -508,7 +511,7 @@ def past_trip_list_view():
                 JOIN user_trips ut ON ut.user_ID = u.user_ID
                 WHERE ut.trip_ID = ?
                 ORDER BY u.username
-            """, conn, params=(row.trip_ID,))
+            """, engine, params=(row.trip_ID,))
             conn.close()
 
             st.markdown("**Participants:**")
