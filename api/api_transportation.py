@@ -358,8 +358,17 @@ def transportation_managerview(origin: str, destination: str, api_key: str | Non
 
 def show_transportation_details(method_transport, origin, destination, start_date, start_time):
     """
-    Zeigt Transportation-Informationen für Car oder Public Transport.
-    Wird von employee_listview() aufgerufen.
+    Shows transportation information and folium map for travel method for the employee.
+
+    Args:
+        method_transport (int): The transport method (0 = "car"; 1 = "public transport")
+        origin (str): The origin of the trip
+        destination (str): The destination of the trip
+        start_date (date): The start date of the trip
+        end_date (date): The end date of teh trip
+
+    Returns:
+        details of chosen transport method as visualization but no argument is returned
     """
         # ---- Styling für DataFrame kleiner & kompakter ----
     st.markdown("""
@@ -378,26 +387,24 @@ def show_transportation_details(method_transport, origin, destination, start_dat
         start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
 
     if isinstance(start_time, str):
-        # unterstützt sowohl "HH:MM" als auch "HH:MM:SS"
+        # supports "HH:MM" as well as "HH:MM:SS"
         try:
             start_time = datetime.strptime(start_time, "%H:%M").time()
         except:
             start_time = datetime.strptime(start_time, "%H:%M:%S").time()
     col1, col2 = st.columns(2)
 
-    # ---------------------------------------------------------
-    # ------------- OPTION 0: CAR (GOOGLE DIRECTIONS) ---------
-    # ---------------------------------------------------------
+    # details for car
     if method_transport == 0:
-        # Statt URL/requests direkt den gmaps Client verwenden (falls er global verfügbar ist)
-        # Wenn gmaps in transportation_managerview initialisiert wurde, ist es hier verfügbar.
-        # Alternativ: key neu abrufen und gmaps neu initialisieren.
+        # instead of requesting the url we try to use the client gmaps if it exists
+        # if transportation_managerview already got called the client will be initialized otherwise we call the key here and initialize the client a second time
+        
         key = st.secrets.get("GOOGLE_API_KEY", "")
         if not key:
             st.warning("Cannot show map: API Key missing.")
             return
 
-        # Sicherstellen, dass gmaps initialisiert ist
+        # ensuring that gmaps is initialized
         global gmaps
         if gmaps is None:
             try:
@@ -406,7 +413,7 @@ def show_transportation_details(method_transport, origin, destination, start_dat
                 st.error(f"Could not initialise Google Maps client for map: {e}")
                 return
         
-        # Daten über den Client holen (besser als requests.get)
+        # calling dates via client
         try:
             directions = gmaps.directions(
                 origin,
@@ -419,7 +426,7 @@ def show_transportation_details(method_transport, origin, destination, start_dat
             return
 
         if directions and directions[0]["legs"]:
-            data = {"routes": directions} # Struktur an alten Code anpassen
+            data = {"routes": directions} # adapting to ancient code structure
             leg = data["routes"][0]["legs"][0]
 
             distance = leg["distance"]["text"]
@@ -429,24 +436,24 @@ def show_transportation_details(method_transport, origin, destination, start_dat
             end_lat = leg["end_location"]["lat"]
             end_lng = leg["end_location"]["lng"]
 
-            # ---- LEFT COLUMN ----
+            # left column details
             with col1:
                 st.subheader("Car details")
                 st.write(f"**Distance:** {distance}")
                 st.write(f"**Duration:** {duration}")
 
-            # ---- RIGHT COLUMN (Map) ----
+            # right column folium map
             with col2:
                 m = folium.Map(
                     location=[(start_lat + end_lat) / 2, (start_lng + end_lng) / 2],
                     zoom_start=11
                 )
 
-                # Marker
+                # marker for the map
                 folium.Marker([start_lat, start_lng]).add_to(m)
                 folium.Marker([end_lat, end_lng]).add_to(m)
 
-                # ---- WICHTIG: echte Google-Route zeichnen ----
+                # polyline of the actual car route from google
                 if "overview_polyline" in data["routes"][0]:
                     poly = data["routes"][0]["overview_polyline"]["points"]
                     coords = polyline.decode(poly)
@@ -459,18 +466,15 @@ def show_transportation_details(method_transport, origin, destination, start_dat
         else:
             st.warning("Could not retrieve driving route via Google Maps.")
 
-    # ---------------------------------------------------------
-    # -------- OPTION 1: PUBLIC TRANSPORT (SBB + Google) -------
-    # ---------------------------------------------------------
+    # details for public transport
     elif method_transport == 1:
-        # 1) Ziel: Verbindungen, die ca. 30 Minuten vor Eventbeginn ankommen
-        #    → wir fragen die SBB-API mit einer Zeit, die 30 Min vor dem Event liegt
+        # showing connections that arrive approximately 30 minutes before the event starts
         event_dt = datetime.combine(start_date, start_time)
         query_dt = event_dt - timedelta(minutes=30)
         date_str = query_dt.strftime("%Y-%m-%d")
         time_str = query_dt.strftime("%H:%M")
 
-        # ---- SBB OpenData: bis zu 3 Verbindungen holen ----
+        # getting three connections from the sbb open api
         sbb_url = "https://transport.opendata.ch/v1/connections"
         params = {
             "from": origin,
@@ -489,7 +493,7 @@ def show_transportation_details(method_transport, origin, destination, start_dat
             connections = []
             st.warning(f"Could not retrieve SBB connections: {e}")
 
-        # ---- LINKE SPALTE: 3 Verbindungen in einer Tabelle ----
+        # displaying the three options in a table
         with col1:
             st.subheader("Public Transport")
 
@@ -504,7 +508,7 @@ def show_transportation_details(method_transport, origin, destination, start_dat
                     dep_time_raw = dep.get("departure", "")
                     arr_time_raw = arr.get("arrival", "")
 
-                    # Zeit formatieren
+                    # formatting time
                     try:
                         dep_dt = datetime.strptime(dep_time_raw, "%Y-%m-%dT%H:%M:%S%z")
                         dep_time = dep_dt.strftime("%H:%M")
@@ -520,6 +524,7 @@ def show_transportation_details(method_transport, origin, destination, start_dat
                     products = conn.get("products", [])
                     trains = ", ".join(products) if products else "-"
 
+                    # getting platform details
                     platform = (
                         dep.get("platform")
                         or dep.get("prognosis", {}).get("platform")
@@ -532,16 +537,16 @@ def show_transportation_details(method_transport, origin, destination, start_dat
                         "Train": trains
                     })
 
-                # ✅ DataFrame nur mit den 3 gewünschten Spalten
+                # dataframe with three columns to list the public transport connections
                 df = pd.DataFrame(rows)[["Departure", "Arrival", "Train"]]
 
-                # Index als Connection 1, 2, 3
+                # Index for the three connections
                 df.index = [i + 1 for i in range(len(df))]
                 df.index.name = "Connection"
 
                 st.dataframe(df, use_container_width=True)
         
-        # ---- RECHTE SPALTE: Karte über Google Directions (Transit) ----
+        # right column folium map
         with col2:
             key = st.secrets.get("GOOGLE_API_KEY", "")
             if not key:
@@ -553,7 +558,7 @@ def show_transportation_details(method_transport, origin, destination, start_dat
                 "origin": origin,
                 "destination": destination,
                 "mode": "transit",
-                "key": key, # Verwenden des lokal abgerufenen Keys
+                "key": key, # using lokal key
             }
 
             g_resp = requests.get(g_url, params=g_params)
@@ -567,7 +572,7 @@ def show_transportation_details(method_transport, origin, destination, start_dat
                 end_lat = leg["end_location"]["lat"]
                 end_lng = leg["end_location"]["lng"]
 
-                # Karte mittig zwischen Start und Ziel
+                # placing map in the middle between origin and destination
                 m = folium.Map(
                     location=[(start_lat + end_lat) / 2, (start_lng + end_lng) / 2],
                     zoom_start=11,
@@ -584,7 +589,7 @@ def show_transportation_details(method_transport, origin, destination, start_dat
                     icon=folium.Icon(color="red"),
                 ).add_to(m)
 
-                # Polyline der echten ÖV-Route von Google
+                # polyline of the actual public transport route from google
                 if "overview_polyline" in g_data["routes"][0]:
                     poly = g_data["routes"][0]["overview_polyline"]["points"]
                     coords = polyline.decode(poly)
