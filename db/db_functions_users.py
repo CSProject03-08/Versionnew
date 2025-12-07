@@ -1017,7 +1017,9 @@ def get_users_under_me() -> pd.DataFrame | None:
         conn.close()
 
 
-
+##################################################################
+# non-database related user functions below
+##################################################################
 def logout():
     """Logs out the user and redirects to main.py.
     Args:
