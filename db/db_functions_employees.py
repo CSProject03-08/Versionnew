@@ -102,12 +102,28 @@ def employee_listview():
     if trip_df.empty:
         st.info("No trips assigned yet.")
         return
-    
-    show_trip_weather(
-            destination=row.destination,
-            start_date=row.start_date,
-            end_date=row.end_date,)
 
+    # ... expense_wizard-Init etc.
+
+    for _, row in trip_df.iterrows():
+        start_date = pd.to_datetime(row.start_date).date()
+        end_date = pd.to_datetime(row.end_date).date()
+
+        trip_id = row.trip_ID
+        is_active = wiz["active_trip_id"] == trip_id
+
+        with st.expander(
+            f"{row.trip_ID}: - {row.origin} → {row.destination} ({row.start_date} → {row.end_date})",
+            expanded=is_active
+        ):
+            # … deine bisherigen Details …
+
+            st.subheader("Weather Forecast for your trip")
+            show_trip_weather(
+                destination=row.destination,
+                start_date=row.start_date,
+                end_date=row.end_date,
+            )
     # ---- init expense wizard state once ----
     if "expense_wizard" not in st.session_state:
         st.session_state.expense_wizard = {
