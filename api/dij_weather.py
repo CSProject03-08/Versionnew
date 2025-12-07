@@ -113,7 +113,7 @@ def _to_date(d) -> date:
 
 def show_trip_weather(destination: str, start_date, end_date) -> None:
     """
-    shows combined weather data for a trip.
+    shows combined weather data for a trip, temperature and rain chances.
     Args:
         destination (str): the trip destination
         start_date (date): the trip start date
