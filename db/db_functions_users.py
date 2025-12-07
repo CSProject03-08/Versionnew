@@ -1015,3 +1015,24 @@ def get_users_under_me() -> pd.DataFrame | None:
 
     finally:
         conn.close()
+
+
+
+def logout():
+    """Logs out the user and redirects to main.py.
+    Args:
+        None    
+        
+    Returns:
+        None
+    """
+    if st.button(" Logout", type="secondary"):
+        # deletes data related to session states
+        for key in ["user_ID", "role", "username"]:
+            if key in st.session_state:
+                del st.session_state[key]
+
+        st.success("You have been logged out.")
+
+        # redirects to main.py
+        st.switch_page("main.py")
