@@ -4,6 +4,7 @@ import pyodbc
 import time
 import streamlit as st
 import pandas as pd
+from sqlalchemy import create_engine
 from api.api_city_lookup import get_city_coords
 from ml.ml_model import retrain_model
 from db.expenses_user import insert_expense_for_training
@@ -27,6 +28,10 @@ CONNECTION_STRING = (
     'Encrypt=yes;'  
     'TrustServerCertificate=no;'
 )
+
+DATABASE_URI = ("mssql+pyodbc://{USERNAME}:{PASSWORD}@{SERVER_NAME}/{DATABASE_NAME}?driver=ODBC+Driver+17+for+SQL+Server")
+
+engine = create_engine(DATABASE_URI)
 
 def connect():
     """Connects to Azure SQL-database.
@@ -86,7 +91,7 @@ def employee_listview():
             AND ? <= t.end_date
             AND t.show_trip_e = 1
             ORDER BY t.start_date ASC
-            """, conn, params=(user_id, date.today()))
+            """, engine, params=(user_id, date.today()))
     
     except pd.io.sql.DatabaseError as e:
         st.error(f"Error fetching trips from database: {e}")
@@ -147,7 +152,7 @@ def employee_listview():
                         JOIN user_trips ut ON ut.user_ID = u.user_ID
                         WHERE ut.trip_ID = ?
                         ORDER BY u.username
-                    """, conn, params=(row.trip_ID,))
+                    """, engine, params=(row.trip_ID,))
 
                     st.markdown("**Participants:**")
                     st.dataframe(participants, hide_index=True, width="stretch")
@@ -162,7 +167,7 @@ def employee_listview():
                 conn = connect()
                 method_row = pd.read_sql_query("""
                     SELECT method_transport FROM trips WHERE trip_ID = ?
-                """, conn, params=(row.trip_ID,))
+                """, engine, params=(row.trip_ID,))
                 conn.close()
 
                 method_transport = method_row.iloc[0]["method_transport"] if not method_row.empty else None
