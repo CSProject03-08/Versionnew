@@ -99,10 +99,9 @@ def employee_listview():
         return
     
     show_trip_weather(
-                destination=row.destination,
-                start_date=row.start_date,
-                end_date=row.end_date,
-            )
+            destination=row.destination,
+            start_date=row.start_date,
+            end_date=row.end_date,)
 
     # ---- init expense wizard state once ----
     if "expense_wizard" not in st.session_state:
