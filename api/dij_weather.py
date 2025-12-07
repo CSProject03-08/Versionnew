@@ -1,4 +1,4 @@
-# api_weather.py
+"""dij_weather.py contains the weather visualization for the employee."""
 
 import time
 from datetime import datetime, date
@@ -12,7 +12,17 @@ FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 
 
 def robust_get(url, params=None, retries=3, timeout=20):
-    """Einfache GET-Anfrage mit Retry-Logik."""
+    """
+    Simple get request with retry logic.
+    
+    Args:
+        url (str): the url from the weather api
+        params (dict): params for
+        retries (int): number of retrials
+        timeout (int): time until the search triggers a timeout
+        
+    Returns:
+        r as json script of the request"""
     for attempt in range(retries):
         try:
             r = requests.get(url, params=params, timeout=timeout)
@@ -28,7 +38,14 @@ def robust_get(url, params=None, retries=3, timeout=20):
 
 
 def search_location(place_name: str):
-    """Suche Ort über Open-Meteo-Geocoding und wähle – wenn möglich – eine CH-Lokation."""
+    """
+    Search for a place using open-meteo geocoding and choose a Swiss location if possible.
+    
+    Args:
+        place_name (str): the destination of the trip
+        
+    Returns:
+        dict with the name"""
     params = {
         "name": place_name,
         "count": 5,
