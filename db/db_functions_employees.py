@@ -279,7 +279,6 @@ def past_trip_view_employee():
                         WHERE ut.trip_ID = ?
                         ORDER BY u.username
                     """, conn, params=(row.trip_ID,))
-                    conn.close()
 
                     st.markdown("**Participants:**")
                     st.dataframe(participants, hide_index=True, use_container_width=True)
