@@ -32,7 +32,7 @@ def get_public_ip():
     except Exception as e:
         return f"Error: {e}"
 
-#st.write(f"The public IP address of the streamlit app is: **{get_public_ip()}**")
+st.write(f"The public IP address of the streamlit app is: **{get_public_ip()}**")
 
 #create db and table 'users' if non-existent
 create_tables()
@@ -58,6 +58,7 @@ with st.form("login_form"):
     password = st.text_input("Password", type="password")
     submitted = st.form_submit_button("Login")
 
+# ... alles oben bleibt wie es ist ...
 
 if submitted:
     result = get_user_by_credentials(username, password)
@@ -80,10 +81,40 @@ if submitted:
     else:
         st.error("Wrong username or password.")
 
-" "
-" "
-" "
-" "
-"""
-Not registered yet? You can register as a manager and start planning your business-trips within your company, create a new account and start inviting your employees. Register now:"""
+# ---- Text unterhalb des Login-Forms anzeigen ----
+st.markdown(
+    """
+    ---
+    Not registered yet? You can register as a manager and start planning your business-trips within your company, create a new account and start inviting your employees. Register now:
+    """
+)
+
 register_main()
+#if submitted:
+#    result = get_user_by_credentials(username, password)
+#    if result:
+#        uname, role = result
+#        st.session_state["username"] = uname
+#        st.session_state["role"] = role
+#        role_sortkey = get_role_sortkey(role)
+#        st.session_state["role_sortkey"] = role_sortkey
+#        st.session_state["user_ID"] = get_user_ID(uname)
+#        st.session_state["manager_ID"] = get_manager_ID(uname)
+#        elif role == "Manager":
+#        st.success(f"Welcome {uname}! Role: {role}")
+#        time.sleep(1)
+#        if role == "Administrator":
+#            st.switch_page("pages/admin_overview.py")
+#            st.switch_page("pages/manager_overview.py")
+#        else:
+#            st.switch_page("pages/user_overview.py")
+#    else:
+#        st.error("Wrong username or password.")
+
+#" "
+#" "
+#" "
+#" "
+#"""
+#Not registered yet? You can register as a manager and start planning your business-trips within your company, create a new account and start inviting your employees. Register now:"""
+#register_main()
