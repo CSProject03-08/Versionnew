@@ -7,46 +7,15 @@ import time
 from db.db_functions_users import create_tables, add_user, get_user_by_credentials, get_role_sortkey, register_main, get_user_ID, get_manager_ID, initialize_data, add_user
 import pandas as pd
 import requests
-import pyodbc
+from sqlalchemy import create_engine
 
 #basic page settings
 st.set_page_config(page_title="Login", layout="centered", initial_sidebar_state="collapsed")
 st.title("Login")
 
-### pulling crucial access infromation from streamlit secrets file ###
-SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
-DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
-USERNAME = st.secrets["azure_db"]["USERNAME"]
-PASSWORD = st.secrets["azure_db"]["PASSWORD"]
+DATABASE_URI = st.secrets["azure_db"]["ENGINE"]
 
-### creating connection object referring to the MS Azure database ###
-CONNECTION_STRING = (
-    'DRIVER={ODBC Driver 17 for SQL Server};'
-    f'SERVER={SERVER_NAME};'
-    f'DATABASE={DATABASE_NAME};'
-    f'UID={USERNAME};'
-    f'PWD={PASSWORD};'
-    'Encrypt=yes;'  
-    'TrustServerCertificate=no;'
-)
-
-
-def connect():
-    """Connects to Azure SQL-database.
-    
-    Args:
-        None
-        
-    Returns:
-        None
-    """
-    try:
-        conn = pyodbc.connect(CONNECTION_STRING)
-        return conn
-    except pyodbc.Error as ex: # raises error in case the connection is not possible
-        sqlstate = ex.args[0]
-        st.error(f"Connection error: {sqlstate}")
-        return None
+engine = create_engine(DATABASE_URI)
 
 # display of the current ip adress from streamlit to adjust the firewall of MS Azure when app gets rebooted
 def get_public_ip():
@@ -67,7 +36,7 @@ def create_first_users():
     ckeck_users_df = pd.read_sql_query("""
         SELECT username FROM users 
         WHERE username = ? OR username = ? OR username = ?
-        """, conn, params=('Admin', 'Manager', 'User')
+        """, engine, params=('Admin', 'Manager', 'User')
     )
 
     if len(ckeck_users_df) == 0:
