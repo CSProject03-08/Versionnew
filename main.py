@@ -66,8 +66,8 @@ def create_first_users():
     conn = connect()
     ckeck_users_df = pd.read_sql_query("""
         SELECT username FROM users 
-        WHERE username = 'Admin' OR 'Manager' OR 'User' 
-        """, conn
+        WHERE username = ? OR username = ? OR username = ?
+        """, conn, params=('Admin', 'Manager', 'User')
     )
 
     if len(ckeck_users_df) == 0:
