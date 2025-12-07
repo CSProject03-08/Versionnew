@@ -22,21 +22,40 @@ ADMIN = st.secrets["dummy"]["ADMIN"]
 st.set_page_config(page_title="Login", layout="centered", initial_sidebar_state="collapsed")
 st.title("Login")
 
-ADMIN = st.secrets["dummy"]["ADMIN"]
+#ADMIN = st.secrets["dummy"]["ADMIN"]
 
 # display of the current ip adress from streamlit to adjust the firewall of MS Azure when app gets rebooted
-def get_public_ip():
-    try:
-        response = requests.get('https://api.ipify.org?format=json')
-        return response.json()['ip']
-    except Exception as e:
-        return f"Error: {e}"
+#def get_public_ip():
+#    try:
+#        response = requests.get('https://api.ipify.org?format=json')
+#        return response.json()['ip']
+#    except Exception as e:
+#        return f"Error: {e}"
 
-st.write(f"The public IP address of the streamlit app is: **{get_public_ip()}**")
+#st.write(f"The public IP address of the streamlit app is: **{get_public_ip()}**")
+
+
+def get_public_ip() -> str:
+    """
+    Tries to fetch the public IP. Never raises,
+    always returns a string (either IP or error message).
+    """
+    try:
+        resp = requests.get("https://api.ipify.org?format=json", timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("ip", "unknown")
+    except Exception as e:
+        # Alles abfangen und nur als Text zurückgeben
+        return f"Error fetching IP: {e}"
+
+ip_info = get_public_ip()
+st.caption(f"The public IP address of the streamlit app is: **{ip_info}**")
+
 
 #create db and table 'users' if non-existent
 create_tables()
-initialize_data()
+#initialize_data()
 # add ADMIN to user.db if they do not exist
 def create_first_users():
     ckeck_users_df = pd.read_sql_query("""
@@ -50,7 +69,7 @@ def create_first_users():
     else:
         pass
     
-create_first_users()
+#create_first_users()
 
 # Login-inputs, with censored password
 with st.form("login_form"):
@@ -60,6 +79,7 @@ with st.form("login_form"):
 
 # ... alles oben bleibt wie es ist ...
 
+register_main()
 if submitted:
     result = get_user_by_credentials(username, password)
     if result:
@@ -70,51 +90,21 @@ if submitted:
         st.session_state["role_sortkey"] = role_sortkey
         st.session_state["user_ID"] = get_user_ID(uname)
         st.session_state["manager_ID"] = get_manager_ID(uname)
+        elif role == "Manager":
         st.success(f"Welcome {uname}! Role: {role}")
         time.sleep(1)
         if role == "Administrator":
             st.switch_page("pages/admin_overview.py")
-        elif role == "Manager":
             st.switch_page("pages/manager_overview.py")
         else:
             st.switch_page("pages/user_overview.py")
     else:
         st.error("Wrong username or password.")
 
-# ---- Text unterhalb des Login-Forms anzeigen ----
-st.markdown(
-    """
-    ---
-    Not registered yet? You can register as a manager and start planning your business-trips within your company, create a new account and start inviting your employees. Register now:
-    """
-)
-
+" "
+" "
+" "
+" "
+"""
+Not registered yet? You can register as a manager and start planning your business-trips within your company, create a new account and start inviting your employees. Register now:"""
 register_main()
-#if submitted:
-#    result = get_user_by_credentials(username, password)
-#    if result:
-#        uname, role = result
-#        st.session_state["username"] = uname
-#        st.session_state["role"] = role
-#        role_sortkey = get_role_sortkey(role)
-#        st.session_state["role_sortkey"] = role_sortkey
-#        st.session_state["user_ID"] = get_user_ID(uname)
-#        st.session_state["manager_ID"] = get_manager_ID(uname)
-#        elif role == "Manager":
-#        st.success(f"Welcome {uname}! Role: {role}")
-#        time.sleep(1)
-#        if role == "Administrator":
-#            st.switch_page("pages/admin_overview.py")
-#            st.switch_page("pages/manager_overview.py")
-#        else:
-#            st.switch_page("pages/user_overview.py")
-#    else:
-#        st.error("Wrong username or password.")
-
-#" "
-#" "
-#" "
-#" "
-#"""
-#Not registered yet? You can register as a manager and start planning your business-trips within your company, create a new account and start inviting your employees. Register now:"""
-#register_main()
