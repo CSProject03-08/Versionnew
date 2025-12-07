@@ -79,7 +79,35 @@ with st.form("login_form"):
 
 # ... alles oben bleibt wie es ist ...
 
-register_main()
+#if submitted:
+#    result = get_user_by_credentials(username, password)
+#    if result:
+#        uname, role = result
+#        st.session_state["username"] = uname
+#        st.session_state["role"] = role
+#        role_sortkey = get_role_sortkey(role)
+#        st.session_state["role_sortkey"] = role_sortkey
+#        st.session_state["user_ID"] = get_user_ID(uname)
+#        st.session_state["manager_ID"] = get_manager_ID(uname)
+#    elif role == "Manager":
+#        st.success(f"Welcome {uname}! Role: {role}")
+#        time.sleep(1)
+#        if role == "Administrator":
+#            st.switch_page("pages/admin_overview.py")
+#            st.switch_page("pages/manager_overview.py")
+#        else:
+#            st.switch_page("pages/user_overview.py")
+#    else:
+#        st.error("Wrong username or password.")
+#
+#" "
+#" "
+#" "
+#" "
+#"""
+#Not registered yet? You can register as a manager and start planning your business-trips within your company, create a new account and start inviting your employees. Register now:"""
+#register_main()
+
 if submitted:
     result = get_user_by_credentials(username, password)
     if result:
@@ -90,11 +118,11 @@ if submitted:
         st.session_state["role_sortkey"] = role_sortkey
         st.session_state["user_ID"] = get_user_ID(uname)
         st.session_state["manager_ID"] = get_manager_ID(uname)
-        elif role == "Manager":
-        st.success(f"Welcome {uname}! Role: {role}")
+        st.success(f"Welcome {uname}! 🎉 Role: {role}")
         time.sleep(1)
         if role == "Administrator":
             st.switch_page("pages/admin_overview.py")
+        elif role == "Manager":
             st.switch_page("pages/manager_overview.py")
         else:
             st.switch_page("pages/user_overview.py")
