@@ -29,7 +29,7 @@ CONNECTION_STRING = (
     'TrustServerCertificate=no;'
 )
 
-DATABASE_URI = ("mssql+pyodbc://{USERNAME}:{PASSWORD}@{SERVER_NAME}/{DATABASE_NAME}?driver=ODBC+Driver+17+for+SQL+Server")
+DATABASE_URI = st.secrets["azure_db"]["ENGINE"]
 
 engine = create_engine(DATABASE_URI)
 
