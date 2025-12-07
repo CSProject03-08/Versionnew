@@ -15,3 +15,4 @@ polyline
 folium
 streamlit_folium
 plotly>=5.18.0
+sqlalchemy
