@@ -68,36 +68,43 @@ def employee_listview():
     if conn is None:
         st.error("Could not connect to the database.")
         return
-    
-    try:
-        trip_df = pd.read_sql_query("""
-            SELECT 
-            t.trip_ID,
-            t.origin,
-            t.destination,
-            t.start_date,
-            t.end_date,
-            t.start_time,
-            t.end_time,
-            t.occasion,
-            t.show_trip_e
-            FROM trips t
-            JOIN user_trips ut ON t.trip_ID = ut.trip_ID
-            WHERE ut.user_ID = ?
-            AND ? <= t.end_date
-            AND t.show_trip_e = 1
-            ORDER BY t.start_date ASC
-            """, conn, params=(user_id, date.today()))
-    
-    except pd.io.sql.DatabaseError as e:
-        st.error(f"Error fetching trips from database: {e}")
-        return
-    finally:
-        conn.close()
+    left, right = st.columns[4, 2]
+    with left:
+        try:
+            trip_df = pd.read_sql_query("""
+                SELECT 
+                t.trip_ID,
+                t.origin,
+                t.destination,
+                t.start_date,
+                t.end_date,
+                t.start_time,
+                t.end_time,
+                t.occasion,
+                t.show_trip_e
+                FROM trips t
+                JOIN user_trips ut ON t.trip_ID = ut.trip_ID
+                WHERE ut.user_ID = ?
+                AND ? <= t.end_date
+                AND t.show_trip_e = 1
+                ORDER BY t.start_date ASC
+                """, conn, params=(user_id, date.today()))
+        
+        except pd.io.sql.DatabaseError as e:
+            st.error(f"Error fetching trips from database: {e}")
+            return
+        finally:
+            conn.close()
 
-    if trip_df.empty:
-        st.info("No trips assigned yet.")
-        return
+        if trip_df.empty:
+            st.info("No trips assigned yet.")
+            return
+    with right:
+        show_trip_weather(
+                    destination=row.destination,
+                    start_date=row.start_date,
+                    end_date=row.end_date,
+                )
 
     # ---- init expense wizard state once ----
     if "expense_wizard" not in st.session_state:
@@ -171,12 +178,12 @@ def employee_listview():
                     row.start_time
 )
 
-                st.subheader("Weather Forecast for your trips")
-                show_trip_weather(
-                    destination=row.destination,
-                    start_date=row.start_date,
-                    end_date=row.end_date,
-                )
+                #st.subheader("Weather Forecast for your trips")
+                #show_trip_weather(
+                #    destination=row.destination,
+                #    start_date=row.start_date,
+                #    end_date=row.end_date,
+                #)
 
 def past_trip_view_employee():
     """
