@@ -222,7 +222,7 @@ def past_trip_view_employee():
             AND ? > end_date                      
             AND t.show_trip_e = 1
             ORDER BY t.start_date ASC
-            """, conn, params=(user_id, date.today()))
+            """, engine, params=(user_id, date.today()))
 
     except pd.io.sql.DatabaseError as e:
         st.error(f"Error fetching past trips from database: {e}")
@@ -278,7 +278,7 @@ def past_trip_view_employee():
                         JOIN user_trips ut ON ut.user_ID = u.user_ID
                         WHERE ut.trip_ID = ?
                         ORDER BY u.username
-                    """, conn, params=(row.trip_ID,))
+                    """, engine, params=(row.trip_ID,))
 
                     st.markdown("**Participants:**")
                     st.dataframe(participants, hide_index=True, width="stretch")
