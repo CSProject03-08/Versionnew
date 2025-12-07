@@ -13,6 +13,7 @@ from geopy.distance import geodesic
 from api.api_transportation import show_transportation_details
 from api.dij_weather import show_trip_weather
 from sqlalchemy import create_engine
+from api.News import news_widget
 
 # The engine serves as a central gateway to the database (MS Azure SQL). 
 # It manages the connections and translates Python commands into the appropriate SQL dialect.
@@ -130,6 +131,8 @@ def employee_listview():
             expanded=is_active
         ):
             
+            destination = row.destination
+
             c1, c2 = st.columns(2)
             with c1:
                 st.write("**Occasion:**", row.occasion)
@@ -188,6 +191,12 @@ def employee_listview():
                  #   start_date=row.start_date,
                   #  end_date=row.end_date,
                 #)
+
+            try:
+                news_widget(destination)
+    
+            except Exception as e:
+                st.error(f"Error: {e}")
 
 def past_trip_view_employee():
     """
