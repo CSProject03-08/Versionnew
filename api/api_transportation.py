@@ -9,21 +9,25 @@ import folium
 from streamlit_folium import st_folium
 import pandas as pd
 
-# Globaler Client, initialisiert auf None, um ImportError zu vermeiden.
-# Die Zuweisung GOOGLE_API_KEY = st.secrets[...] wurde entfernt!
+# global client, initialized on None to prevent ImportError
 gmaps = None
 
-# ---------- Helper ----------
-
+# helper functions
 def get_route(origin: str, destination: str, mode: str = "driving"):
-    """Fetch a single route (first alternative) from Google Directions API."""
+    """
+    Fetch a single route (first alternative) from Google Directions API.
+    
+    Args:
+        origin (str): The origin of the trip
+        destination (str): The destination of the trip
+        mode (str): The travel method (car (driving) or public transport (transit))
+        
+    Returns:
+        directions (dict): First trip details of the api.
+    """
     global gmaps
 
-    if gmaps is None:
-        # Hier sollte gmaps eigentlich schon initialisiert sein,
-        # aber wir verhindern den Absturz im Helper.
-        # WICHTIG: Wenn diese Funktion direkt aufgerufen wird, ohne
-        # vorher transportation_managerview auszuführen, fehlt der Client.
+    if gmaps is None: # gmaps should be initialized via transportation_managerview
         st.error("Google Maps client is not initialised. Call transportation_managerview first.")
         return None
 
@@ -47,6 +51,12 @@ def calculate_costs_auto(dist_km: float) -> dict:
     """
     Simple car cost model:
     - allowance per km: CHF 0.75
+
+    Args:
+        dist_km (float): The travel distance in km.
+
+    Returns:
+        dict: Contains the allowance and the total cost for the trip by car.
     """
     allowance_per_km = 0.75
     total = dist_km * allowance_per_km
@@ -61,6 +71,12 @@ def calculate_costs_ov(dist_km: float) -> dict:
     Simple public transport cost model (fallback, wenn keine echte Fare-API verwendet wird):
     - base price: CHF 2.80
     - price per km: CHF 0.31
+
+    Args:
+        dist_km (float): The travel distance in km.
+
+    Returns:
+        dict: Ticket price of the public transport for trip.
     """
     base_price = 2.80
     price_per_km = 0.31
@@ -79,8 +95,18 @@ def get_ticket_price_opendata(
     default_price: float = 30.0
 ) -> float:
     """
-    Versucht, über transport.opendata.ch eine reale Fare zu holen.
-    Falls Fehler → default_price.
+    Tries to get via transport.opendata.ch a real fare price.
+    If it fails it retuns a default price.
+
+    Args:
+        start (str): The origin of the trip
+        dest (str): The destination of the trip
+        date_obj (None): Date of the trip (default None)
+        time_obj (None): Time of the trip (default None)
+        default_price (float): In case of failed trial the default price
+
+    Returns:
+        fare (float): The real fare of the public transport ticket via the api
     """
     if date_obj is None:
         date_obj = datetime.now().date()
@@ -112,14 +138,19 @@ def get_ticket_price_opendata(
 
         return float(fare)
     except Exception:
-        # Fallback auf default_price, wenn irgendetwas schief geht
+        # fallback to default price in case it doesn't work
         return default_price
 
 
 def get_transit_transfers_full(route_transit: dict):
     """
-    Extrahiert grob die wichtigsten Umstiege aus einer Transit-Route.
-    Gibt eine Liste von Strings zurück.
+    Extracts the main points of transfer of the transit route.
+
+    Args:
+        route_transit (dict): The transit route as a dictionary
+
+    Returns:
+        transfers (list): A list with location and time of start, end and transfer points of the route
     """
     if not route_transit:
         return []
@@ -132,7 +163,7 @@ def get_transit_transfers_full(route_transit: dict):
     leg0 = legs[0]
     steps = leg0.get("steps", [])
 
-    # Startpunkt
+    # strat point
     transit_steps = [s for s in steps if s.get("travel_mode") == "TRANSIT"]
     if not transit_steps:
         return transfers
@@ -142,7 +173,7 @@ def get_transit_transfers_full(route_transit: dict):
     dep_time = first["transit_details"]["departure_time"]["text"]
     transfers.append(f"Start: {dep_stop} - {dep_time}")
 
-    # Umstiege
+    # transfer points
     prev_line = None
     prev_arr_stop = None
     for step in transit_steps:
@@ -152,12 +183,12 @@ def get_transit_transfers_full(route_transit: dict):
         arr_time = details["arrival_time"]["text"]
 
         if prev_line and prev_line != line_name:
-            transfers.append(f"Umstieg: {prev_arr_stop} - {arr_time}")
+            transfers.append(f"Transfer: {prev_arr_stop} - {arr_time}")
 
         prev_line = line_name
         prev_arr_stop = arr_stop
 
-    # Ziel
+    # end point
     last = transit_steps[-1]
     arr_stop = last["transit_details"]["arrival_stop"]["name"]
     arr_time = last["transit_details"]["arrival_time"]["text"]
@@ -167,7 +198,17 @@ def get_transit_transfers_full(route_transit: dict):
 
 
 def create_map(route: dict, origin: str, destination: str):
-    """Erstellt eine Folium-Map für die angegebene Route."""
+    """
+    Creates a folium map for the given route.
+
+    Args:
+        route (dict): The transit route as a dictionary
+        origin (str): The origin of the trip
+        destination (str): The destiantion of the trip
+
+    Returns:
+        m (folium.map): The folium map for the given route as a visualization
+    """
     if not route:
         return None
 
@@ -183,19 +224,21 @@ def create_map(route: dict, origin: str, destination: str):
 
     m = folium.Map(location=start_coords, zoom_start=12)
 
+    # green marker for the start location
     folium.Marker(
         location=start_coords,
         popup=origin,
         icon=folium.Icon(color="green"),
     ).add_to(m)
 
+    # red marker for the end location
     folium.Marker(
         location=end_coords,
         popup=destination,
         icon=folium.Icon(color="red"),
     ).add_to(m)
 
-    # Route-Polyline
+    # blue line for the route
     if "overview_polyline" in route:
         points = polyline.decode(route["overview_polyline"]["points"])
         folium.PolyLine(points, color="blue", weight=5, opacity=0.7).add_to(m)
@@ -203,20 +246,26 @@ def create_map(route: dict, origin: str, destination: str):
     return m
 
 
-# ---------- Hauptfunktion für Manager-View ----------
-
+# main functions for the manager view
 def transportation_managerview(origin: str, destination: str, api_key: str | None = None):
     """
-    Zeigt im Streamlit-UI einen Vergleich zwischen
-    - Auto
-    - öffentlichem Verkehr
+    Shows in the streamlit UI a comparison between:
+    - car
+    - public transport
+    This funciton is build in a way that it takes the inputs from the create_trip_dropdown()
+    function (origin and destination) and the api key in order to compare the two alternatives.
 
-    Diese Funktion ist so gebaut, dass du sie einfach aus create_trip_dropdown()
-    mit origin, destination und api_key aufrufen kannst.
+    Args:
+        origin (str): The origin of the trip
+        destination (str): The destination of the trip
+        api_key (str): The api key which is hidden in the st.secrets
+
+    Returns:
+        Two columns of the two alternatives but no return output
     """
     global gmaps
 
-    # Validierung der Eingaben
+    # validation of inputs
     if not origin or not destination:
         st.info("Please enter origin and destination to see transport comparison.")
         return
@@ -227,32 +276,33 @@ def transportation_managerview(origin: str, destination: str, api_key: str | Non
         st.info("Please enter origin and destination to see transport comparison.")
         return
 
-    # API-Key Quelle (Jetzt defensiver Abruf von st.secrets)
+    # api source called
     key = (api_key or "").strip()
     if not key:
-        # st.secrets wird hier abgerufen, wo Streamlit aktiv ist
+        # st.secrets is called here
         key = st.session_state.get("GOOGLE_API_KEY", st.secrets.get("GOOGLE_API_KEY", "")).strip()
 
     if not key:
         st.warning("Please provide a Google Maps API Key to calculate routes.")
         return
-    
-    # Initialisierung des Clients MUSS den lokal gefundenen Key verwenden
+
+    # initialization of the client. Has to use the local key
     if gmaps is None:
         try:
-            # WICHTIG: Verwenden Sie den lokal gefundenen 'key'
+            # important: use the local key
             gmaps = googlemaps.Client(key=key) 
         except Exception as e:
             st.error(f"Could not initialise Google Maps client: {e}")
             return
 
-    # Routen holen
+    # getting route from helper function
     route_auto = get_route(origin, destination, mode="driving")
     route_transit = get_route(origin, destination, mode="transit")
 
+    # devide in two columns
     col1, col2 = st.columns(2)
 
-    # ---------- Auto ----------
+    # car coulumn
     with col1:
         st.subheader("Car")
 
@@ -273,7 +323,7 @@ def transportation_managerview(origin: str, destination: str, api_key: str | Non
         else:
             st.info("No car route available or API error.")
 
-    # ---------- Öffentlicher Verkehr ----------
+    # public transport column
     with col2:
         st.subheader("Public transport")
 
