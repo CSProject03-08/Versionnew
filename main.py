@@ -97,7 +97,7 @@ if submitted:
         st.session_state["role_sortkey"] = role_sortkey
         st.session_state["user_ID"] = get_user_ID(uname)
         st.session_state["manager_ID"] = get_manager_ID(uname)
-        st.success(f"Welcome {uname}! 🎉 Role: {role}")
+        st.success(f"Welcome {uname}! Role: {role}")
         time.sleep(1)
         if role == "Administrator":
             st.switch_page("pages/admin_overview.py")
