@@ -32,7 +32,7 @@ def get_public_ip():
     except Exception as e:
         return f"Error: {e}"
 
-st.write(f"The public IP address of the streamlit app is: **{get_public_ip()}**")
+#st.write(f"The public IP address of the streamlit app is: **{get_public_ip()}**")
 
 #create db and table 'users' if non-existent
 create_tables()
