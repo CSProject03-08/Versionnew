@@ -71,7 +71,7 @@ def search_location(place_name: str):
 
 
 def get_forecast(lat: float, lon: float):
-    """Hole stündliche Vorhersage für Temperatur und Niederschlagswahrscheinlichkeit."""
+    """Gets the weather forecast from open-meteo.com."""
     params = {
         "latitude": lat,
         "longitude": lon,
@@ -83,7 +83,7 @@ def get_forecast(lat: float, lon: float):
 
 
 def build_hourly_df(forecast: dict) -> pd.DataFrame:
-    """Baue DataFrame mit stündlicher Temperatur und Niederschlagswahrscheinlichkeit."""
+    """builds a dataframe from the hourly forecast data."""
     hourly = forecast.get("hourly", {})
 
     df = pd.DataFrame(
@@ -103,7 +103,7 @@ def build_hourly_df(forecast: dict) -> pd.DataFrame:
 
 
 def _to_date(d) -> date:
-    """Konvertiere flexible Datums-Formate robust in date."""
+    """converts various date inputs to a date object."""
     if isinstance(d, date) and not isinstance(d, datetime):
         return d
     if isinstance(d, datetime):
@@ -113,9 +113,13 @@ def _to_date(d) -> date:
 
 def show_trip_weather(destination: str, start_date, end_date) -> None:
     """
-    Zeigt eine kombinierte Grafik für einen Trip:
-    - stündliche Temperatur (Linie)
-    - Niederschlagswahrscheinlichkeit (Balken, zweite y-Achse)
+    shows combined weather data for a trip.
+    Args:
+        destination (str): the trip destination
+        start_date (date): the trip start date
+        end_date (date): the trip end date
+    Returns:    
+        None
     """
 
     start = _to_date(start_date)
@@ -128,7 +132,7 @@ def show_trip_weather(destination: str, start_date, end_date) -> None:
         return
 
     if loc is None:
-        st.error(f"Ort '{destination}' wurde nicht gefunden.")
+        st.error(f"Place '{destination}' wasn't found.")
         return
 
     try:
@@ -139,7 +143,7 @@ def show_trip_weather(destination: str, start_date, end_date) -> None:
 
     df = build_hourly_df(forecast)
     if df.empty:
-        st.warning("Keine Wetterdaten verfügbar.")
+        st.warning("No data available.")
         return
 
     start_dt = datetime.combine(start, datetime.min.time())
@@ -147,7 +151,7 @@ def show_trip_weather(destination: str, start_date, end_date) -> None:
     df = df.loc[(df.index >= start_dt) & (df.index <= end_dt)]
 
     if df.empty:
-        st.warning("Im gewählten Zeitraum liegen keine Daten vor.")
+        st.warning("No available data in this time.")
         return
 
     fig = go.Figure()
@@ -157,7 +161,7 @@ def show_trip_weather(destination: str, start_date, end_date) -> None:
             x=df.index,
             y=df["temperature"],
             mode="lines",
-            name="Temperatur [°C]",
+            name="Temperature [°C]",
         )
     )
 
@@ -166,18 +170,18 @@ def show_trip_weather(destination: str, start_date, end_date) -> None:
             go.Bar(
                 x=df.index,
                 y=df["precip_prob"],
-                name="Niederschlagswahrscheinlichkeit [%]",
+                name="Chances of rain [%]",
                 opacity=0.3,
                 yaxis="y2",
             )
         )
 
     fig.update_layout(
-        title=f"Wetter für Trip nach {loc['name']} ({loc.get('admin1', '')})",
-        xaxis=dict(title="Zeit"),
-        yaxis=dict(title="Temperatur [°C]"),
+        title=f"Weather for trip to {loc['name']} ({loc.get('admin1', '')})",
+        xaxis=dict(title="Time"),
+        yaxis=dict(title="Temperature [°C]"),
         yaxis2=dict(
-            title="Niederschlagswahrscheinlichkeit [%]",
+            title="Chances of rain [%]",
             overlaying="y",
             side="right",
             range=[0, 100],
@@ -189,5 +193,5 @@ def show_trip_weather(destination: str, start_date, end_date) -> None:
 
     st.plotly_chart(fig, width="stretch")
     st.caption(
-        f"Standort: {loc['name']}, {loc.get('admin1', '')} – Datenquelle: open-meteo.com"
+        f"Location: {loc['name']}, {loc.get('admin1', '')} – Source: open-meteo.com"
     )
