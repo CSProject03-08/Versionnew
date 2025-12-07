@@ -544,7 +544,7 @@ def show_transportation_details(method_transport, origin, destination, start_dat
                 df.index = [i + 1 for i in range(len(df))]
                 df.index.name = "Connection"
 
-                st.dataframe(df, width="stretched")
+                st.dataframe(df, width="stretch")
         
         # right column folium map
         with col2:
