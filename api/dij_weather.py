@@ -187,7 +187,7 @@ def show_trip_weather(destination: str, start_date, end_date) -> None:
         margin=dict(l=40, r=40, t=40, b=40),
     )
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretched")
     st.caption(
         f"Standort: {loc['name']}, {loc.get('admin1', '')} – Datenquelle: open-meteo.com"
     )
