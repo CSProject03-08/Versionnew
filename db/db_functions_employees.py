@@ -171,12 +171,12 @@ def employee_listview():
                     row.start_time
 )
 
-                #st.subheader("Weather Forecast for your trips")
-                #show_trip_weather(
-                #    destination=row.destination,
-                #    start_date=row.start_date,
-                #    end_date=row.end_date,
-                #)
+                st.subheader("Weather Forecast for your trips")
+                show_trip_weather(
+                    destination=row.destination,
+                    start_date=row.start_date,
+                    end_date=row.end_date,
+                )
 
 def past_trip_view_employee():
     """
