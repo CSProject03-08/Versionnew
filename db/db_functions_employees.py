@@ -133,7 +133,7 @@ def employee_listview():
 
             destination = row.destination
 
-            c1, c2 = st.columns(2)
+            c1, c2 = st.columns([2, 5], gap="large")
             with c1:
                 st.markdown(f"**Occasion:** {row.occasion}")
                 st.markdown(f"**Start Date:** {row.start_date}")
