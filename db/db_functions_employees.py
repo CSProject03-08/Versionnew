@@ -55,7 +55,7 @@ def connect():
         st.error(f"Connection error: {sqlstate}")
         return None
 
-def employee_listview():
+def employee_listview_old():
     """
     Returns all trips assigned to a given user (employee) using the user_trips mapping table.
     Args:
@@ -195,6 +195,156 @@ def employee_listview():
             try:
                 news_widget(destination)
     
+            except Exception as e:
+                st.error(f"Error: {e}")
+
+
+def employee_listview():
+    """
+    Returns all upcoming trips assigned to the logged-in user (employee),
+    using the user_trips mapping table. Also shows transportation details,
+    weather and news.
+    """
+    if "user_ID" not in st.session_state:
+        st.warning("Please log in to see your trips.")
+        return
+
+    # --- User-ID aus Session holen ---
+    try:
+        user_id = int(st.session_state["user_ID"])
+    except (ValueError, TypeError):
+        st.error("Invalid User ID format in session state.")
+        return
+
+    # --- Trips laden (nur kommende / laufende, show_trip_e = 1) ---
+    try:
+        trip_df = pd.read_sql_query(
+            """
+            SELECT 
+                t.trip_ID,
+                t.origin,
+                t.destination,
+                t.start_date,
+                t.end_date,
+                t.start_time,
+                t.end_time,
+                t.occasion,
+                t.show_trip_e
+            FROM trips t
+            JOIN user_trips ut ON t.trip_ID = ut.trip_ID
+            WHERE ut.user_ID = ?
+              AND ? <= t.end_date
+              AND t.show_trip_e = 1
+            ORDER BY t.start_date ASC
+            """,
+            engine,
+            params=(user_id, date.today()),
+        )
+    except pd.io.sql.DatabaseError as e:
+        st.error(f"Error fetching trips from database: {e}")
+        return
+
+    if trip_df.empty:
+        st.info("No trips assigned yet.")
+        return
+
+    # ---- init expense wizard state once ----
+    if "expense_wizard" not in st.session_state:
+        st.session_state.expense_wizard = {
+            "active_trip_id": None,
+            "step": 1,
+            "hotel_cost": 0.0, "hotel_files": [],
+            "transport_cost": 0.0, "transport_files": [],
+            "meals_cost": 0.0, "meals_files": [],
+            "other_cost": 0.0, "other_files": [],
+        }
+    wiz = st.session_state.expense_wizard
+
+    if "expense_summaries" not in st.session_state:
+        st.session_state.expense_summaries = {}  # key: trip_id, value: text
+    summaries = st.session_state.expense_summaries
+
+    # --- alle Trips iterieren ---
+    for _, row in trip_df.iterrows():
+        start_date = pd.to_datetime(row.start_date).date()
+        end_date = pd.to_datetime(row.end_date).date()
+
+        trip_id = row.trip_ID
+        is_active = wiz["active_trip_id"] == trip_id
+
+        with st.expander(
+            f"{row.trip_ID}: - {row.origin} → {row.destination} ({row.start_date} → {row.end_date})",
+            expanded=is_active,
+        ):
+            destination = row.destination
+
+            # Trip-Basisinfos
+            st.write("**Occasion:**", row.occasion)
+            st.write("**Start Date:**", row.start_date)
+            st.write("**End Date:**", row.end_date)
+            st.write("**Start Time:**", row.start_time)
+            st.write("**End Time:**", row.end_time)
+
+            # Wetter (deine neue Funktion)
+            show_trip_weather(
+                destination=row.destination,
+                start_date=row.start_date,
+                end_date=row.end_date,
+            )
+
+            # --- Participants laden (via engine) ---
+            try:
+                participants = pd.read_sql_query(
+                    """
+                    SELECT u.username, u.email
+                    FROM users u
+                    JOIN user_trips ut ON ut.user_ID = u.user_ID
+                    WHERE ut.trip_ID = ?
+                    ORDER BY u.username
+                    """,
+                    engine,
+                    params=(row.trip_ID,),
+                )
+
+                st.markdown("**Participants:**")
+                st.dataframe(
+                    participants,
+                    hide_index=True,
+                    use_container_width=True,
+                )
+            except pd.io.sql.DatabaseError as e:
+                st.error(f"Error fetching participants: {e}")
+
+            st.markdown("### Transportation Details")
+
+            # --- Transport-Methode laden (via engine) ---
+            try:
+                method_row = pd.read_sql_query(
+                    "SELECT method_transport FROM trips WHERE trip_ID = ?",
+                    engine,
+                    params=(row.trip_ID,),
+                )
+                method_transport = (
+                    method_row.iloc[0]["method_transport"]
+                    if not method_row.empty
+                    else None
+                )
+            except pd.io.sql.DatabaseError as e:
+                st.error(f"Error fetching transportation method: {e}")
+                method_transport = None
+
+            # --- Transportation-Details anzeigen ---
+            show_transportation_details(
+                method_transport,
+                row.origin,
+                row.destination,
+                row.start_date,
+                row.start_time,
+            )
+
+            # --- News-Widget ---
+            try:
+                news_widget(destination)
             except Exception as e:
                 st.error(f"Error: {e}")
 
