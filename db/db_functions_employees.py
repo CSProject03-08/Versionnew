@@ -240,6 +240,28 @@ def employee_listview_old():
                 st.error(f"Error: {e}")
 
 
+def _safe_date(value):
+    """Konvertiert verschiedene Eingabetypen robust in ein date-Objekt."""
+    if isinstance(value, (datetime, pd.Timestamp)):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if value in (None, "", pd.NaT):
+        return None
+    return pd.to_datetime(str(value)).date()
+
+
+def _safe_time(value):
+    """Konvertiert verschiedene Eingabetypen robust in ein time-Objekt."""
+    if isinstance(value, (datetime, pd.Timestamp)):
+        return value.time()
+    if isinstance(value, dtime):
+        return value
+    if value in (None, "", pd.NaT):
+        return None
+    return pd.to_datetime(str(value)).time()
+
+
 def employee_listview():
     """
     Returns all trips assigned to a given user (employee) using the user_trips mapping table.
@@ -309,10 +331,10 @@ def employee_listview():
         origin = str(row["origin"])
         destination = str(row["destination"])
 
-        start_date = pd.to_datetime(row["start_date"]).date()
-        end_date = pd.to_datetime(row["end_date"]).date()
-        start_time = pd.to_datetime(row["start_time"]).time()
-        end_time = pd.to_datetime(row["end_time"]).time()
+        start_date = _safe_date(row["start_date"])
+        end_date   = _safe_date(row["end_date"])
+        start_time = _safe_time(row["start_time"])
+        end_time   = _safe_time(row["end_time"])
 
         trip_id = int(row["trip_ID"])
         is_active = wiz["active_trip_id"] == trip_id
