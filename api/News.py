@@ -81,7 +81,7 @@ def get_upcoming_trips_for_user():
 
 # --- Fetch news from Mediastack API ---
 def fetch_news_for_city(destination: str):
-    API_KEY = "ad63614ff90fc6ae7308e5cb4c0796d0"  # <-- your key
+    API_KEY = "ad63614ff90fc6ae7308e5cb4c0796d0"
 
     url = "http://api.mediastack.com/v1/news"
     params = {
@@ -90,54 +90,52 @@ def fetch_news_for_city(destination: str):
         "languages": "de",
         "keywords": destination,
         "sort": "published_desc",
-        "limit": 5
+        "limit": 3
     }
 
     try:
         resp = requests.get(url, params=params)
-        st.write = type(resp)
         data = resp.json()
 
+        # falls nichts zurückkommt
         if "data" not in data or not data["data"]:
             return []
 
-        return data["data"][0]["title"]
+        articles = []
+        for item in data["data"][:3]:
+            title = item.get("title", "Ohne Titel")
+            desc = item.get("description", "Keine Beschreibung verfügbar.")
+            articles.append((title, desc))
+
+        return articles
 
     except Exception as e:
         st.error(f"Error fetching news: {e}")
         return []
 
-# --- Display simple list-style news widget ---
-def display_news_list(articles, destination):
-    st.subheader(f"📰 News for your trip to {destination}")
-
-    for article in articles:
-        st.markdown(f"### {article.get('title', 'No title')}")
-        st.write(article.get("description", "No description available."))
-        st.write(f"**Source:** {article.get('source', 'Unknown')}")
-        st.markdown(f"[Read full article]({article.get('url', '#')})")
-        st.markdown("---")
-
-
 # --- MAIN WIDGET: Works exactly like the weather widget ---
 def news_widget(destination: str):
-    """
-    Automatically loops through all upcoming user trips
-    and shows news for each destination.
-    Works exactly like your weather widget.
-    """
+    """Zeigt News zu einem Reiseziel an."""
 
     if not destination:
-        st.info("City to search for news.")
+        st.info("Bitte gib eine Stadt ein, zu der News gesucht werden sollen.")
         return
 
+    news = fetch_news_for_city(destination)
 
-    st.markdown(f"### ✈ Destination: **{destination}**")
+    if not news:
+        st.info(f"Keine News für {destination} gefunden.")
+        return
 
-    articles = fetch_news_for_city(destination)
+    st.subheader(f"News für deine Reise nach {destination}")
 
-    if not articles:
-        st.info(f"No news found for {destination}.")
+    # Jede News einzeln anzeigen
+    for i, (title, description) in enumerate(news, start=1):
+        # Überschrift
+        st.markdown(f"**{i}. {title}**")
+        # kurzer Text
+        st.write(description)
 
-    else:
-        display_news_list(articles, destination)
+        # dünne Trennlinie zwischen den Artikeln
+        if i < len(news):
+            st.markdown("---")
