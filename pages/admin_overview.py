@@ -9,7 +9,11 @@ from utils import hide_sidebar, logout
 
 st.set_page_config(page_title="Admin Dashboard", layout="wide")
 hide_sidebar()
-st.title("Admin Dashboard")
+left2, right2 = st.columns([5, 1], gap="large")
+with left2:
+    st.title("Admin Dashboard")
+with right2:
+    logout()
 
 # Access control, so only admin can access this page
 if "role" not in st.session_state or st.session_state["role"] != "Administrator":
