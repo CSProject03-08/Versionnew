@@ -310,7 +310,13 @@ def trip_list_view():
             expanded=False
         ):
             #list details
-            st.write("**Occasion:**", row.occasion)
+            occasion_val = row.occasion
+
+            if pd.isna(occasion_val) or not isinstance(occasion_val, str) or occasion_val.strip() == "":
+                occasion_val = "No occasion provided"
+
+            st.write("**Occasion:**", occasion_val)
+            st.write("**Start Date:**", row.start_date)
             st.write("**Start Date:**", row.start_date)
             st.write("**End Date:**", row.end_date)
             st.write("**Start Time:**", row.start_time)
@@ -384,7 +390,8 @@ def trip_list_view():
 
             # edit the occasion of the trip
             with st.form(f"edit_trip_{row.trip_ID}"):
-                new_occasion = st.text_input("Edit occasion", value=row.occasion)
+                default_occasion = "" if pd.isna(row.occasion) else str(row.occasion)
+                new_occasion = st.text_input("Edit occasion", value=default_occasion)
                 submitted = st.form_submit_button("Save changes")
                 if submitted:
                     conn = connect()
@@ -503,7 +510,13 @@ def past_trip_list_view():
             expanded=False
         ):
             # list details
-            st.write("**Occasion:**", row.occasion)
+            occasion_val = row.occasion
+
+            if pd.isna(occasion_val) or not isinstance(occasion_val, str) or occasion_val.strip() == "":
+                occasion_val = "No occasion provided"
+
+            st.write("**Occasion:**", occasion_val)
+            st.write("**Start Date:**", row.start_date)
             st.write("**Start Date:**", row.start_date)
             st.write("**End Date:**", row.end_date)
             st.write("**Start Time:**", row.start_time)
