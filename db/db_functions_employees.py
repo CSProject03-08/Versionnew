@@ -120,67 +120,26 @@ def employee_listview():
     summaries = st.session_state.expense_summaries
     
     for _, row in trip_df.iterrows():
-    # Strings für Anzeige
-        origin = str(row["origin"])
-        destination = str(row["destination"])
+        start_date = pd.to_datetime(row.start_date).date()
+        end_date = pd.to_datetime(row.end_date).date()
 
-        # Rohwerte aus dem DataFrame holen
-        raw_start_date = row["start_date"]
-        raw_end_date   = row["end_date"]
-        raw_start_time = row["start_time"]
-        raw_end_time   = row["end_time"]
-
-        # start_date robust in ein date-Objekt umwandeln
-        if isinstance(raw_start_date, (datetime, pd.Timestamp)):
-            start_date = raw_start_date.date()
-        elif isinstance(raw_start_date, date):
-            start_date = raw_start_date
-        else:
-            start_date = pd.to_datetime(str(raw_start_date)).date()
-
-        # end_date robust in ein date-Objekt umwandeln
-        if isinstance(raw_end_date, (datetime, pd.Timestamp)):
-            end_date = raw_end_date.date()
-        elif isinstance(raw_end_date, date):
-            end_date = raw_end_date
-        else:
-            end_date = pd.to_datetime(str(raw_end_date)).date()
-
-        # start_time robust in ein time-Objekt umwandeln
-        if isinstance(raw_start_time, (datetime, pd.Timestamp)):
-            start_time = raw_start_time.time()
-        elif isinstance(raw_start_time, dtime):
-            start_time = raw_start_time
-        else:
-            start_time = pd.to_datetime(str(raw_start_time)).time()
-
-        # end_time robust in ein time-Objekt umwandeln (optional, analog)
-        if isinstance(raw_end_time, (datetime, pd.Timestamp)):
-            end_time = raw_end_time.time()
-        elif isinstance(raw_end_time, dtime):
-            end_time = raw_end_time
-        else:
-            end_time = pd.to_datetime(str(raw_end_time)).time()
-
-        trip_id = int(row["trip_ID"])
+        trip_id = row.trip_ID
         is_active = wiz["active_trip_id"] == trip_id
 
         with st.expander(
-            f"{trip_id}: - {origin} → {destination} ({start_date} → {end_date})",
+            f"{row.trip_ID}: - {row.origin} → {row.destination} ({row.start_date} → {row.end_date})",
             expanded=is_active,
         ):
 
-            
             destination = row.destination
 
             c1, c2 = st.columns(2)
-            with c1:#sollte aus dem kommentar genommen werden. ########################################
-                " "
-                #st.write("**Occasion:**", row.occasion)
-                #st.write("**Start Date:**", row.start_date)
-                #st.write("**End Date:**", row.end_date)
-                #st.write("**Start Time:**", row.start_time)
-                #st.write("**End Time:**", row.end_time)
+            with c1:
+                st.markdown("**Occasion:**", row.occasion)
+                st.markdown("**Start Date:**", row.start_date)
+                st.markdown("**End Date:**", row.end_date)
+                st.markdown("**Start Time:**", row.start_time)
+                st.markdown("**End Time:**", row.end_time)
 
             with c2:
                 show_trip_weather(
