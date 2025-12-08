@@ -28,7 +28,7 @@ USERNAME = st.secrets["azure_db"]["USERNAME"]
 PASSWORD = st.secrets["azure_db"]["PASSWORD"]
 
 CONNECTION_STRING = (
-    'DRIVER={ODBC Driver 17 for SQL Server};'
+    'DRIVER={ODBC Driver 18 for SQL Server};'
     f'SERVER={SERVER_NAME};'
     f'DATABASE={DATABASE_NAME};'
     f'UID={USERNAME};'
@@ -140,6 +140,7 @@ def employee_listview():
                 st.markdown(f"**End Date:** {row.end_date}")
                 st.markdown(f"**Start Time:** {row.start_time}")
                 st.markdown(f"**End Time:** {row.end_time}")
+
             with c2:
                 show_trip_weather(
                     destination=row.destination,
@@ -160,7 +161,7 @@ def employee_listview():
                     """, conn, params=(row.trip_ID,))
 
                     st.markdown("**Participants:**")
-                    st.dataframe(participants, hide_index=True, use_container_width=True)
+                    st.dataframe(participants, hide_index=True, width="stretch")
                 except pd.io.sql.DatabaseError as e:
                     st.error(f"Error fetching participants: {e}")
                 finally:
@@ -301,7 +302,7 @@ def past_trip_view_employee():
                     """, conn, params=(row.trip_ID,))
 
                     st.markdown("**Participants:**")
-                    st.dataframe(participants, hide_index=True, use_container_width=True)
+                    st.dataframe(participants, hide_index=True, width="stretch")
 
                 except pd.io.sql.DatabaseError as e:
                     st.error(f"Error fetching participants: {e}")
@@ -321,7 +322,7 @@ def past_trip_view_employee():
                     "➕ Submit expense report",
                     key=f"open_exp_{trip_id}",
                     type="primary",
-                    use_container_width=True,
+                    width="stretch",
                 ):
                     wiz.update(
                         active_trip_id=trip_id,
@@ -347,7 +348,7 @@ def past_trip_view_employee():
                 with cols_hdr[1]:
                     if st.button(
                         "✖ Close",
-                        use_container_width=True,
+                        width="stretch",
                         key=f"close_{trip_id}",
                     ):
                         wiz["active_trip_id"] = None
@@ -407,7 +408,7 @@ def past_trip_view_employee():
                         st.button(
                             "← Back",
                             on_click=_back,
-                            use_container_width=True,
+                            width="stretch",
                             key=f"back2_{trip_id}",
                         )
                     with c2:
@@ -415,7 +416,7 @@ def past_trip_view_employee():
                             "Next →",
                             type="primary",
                             on_click=_next,
-                            use_container_width=True,
+                            width="stretch",
                             key=f"next2_{trip_id}",
                         )
 
@@ -439,7 +440,7 @@ def past_trip_view_employee():
                         st.button(
                             "← Back",
                             on_click=_back,
-                            use_container_width=True,
+                            width="stretch",
                             key=f"back3_{trip_id}",
                         )
                     with c2:
@@ -447,7 +448,7 @@ def past_trip_view_employee():
                             "Next →",
                             type="primary",
                             on_click=_next,
-                            use_container_width=True,
+                            width="stretch",
                             key=f"next3_{trip_id}",
                         )
 
@@ -471,7 +472,7 @@ def past_trip_view_employee():
                         st.button(
                             "← Back",
                             on_click=_back,
-                            use_container_width=True,
+                            width="stretch",
                             key=f"back4_{trip_id}",
                         )
                     with c2:
@@ -479,7 +480,7 @@ def past_trip_view_employee():
                             "Next →",
                             type="primary",
                             on_click=_next,
-                            use_container_width=True,
+                            width="stretch",
                             key=f"next4_{trip_id}",
                         )
 
@@ -509,16 +510,16 @@ def past_trip_view_employee():
                     c1, c2 = st.columns(2)
                     with c1:
                         st.button(
-                                "← Back",
-                                on_click=_back,
-                                use_container_width=True,
-                                key=f"back5_{trip_id}",
-                            )
+                            "← Back",
+                            on_click=_back,
+                            width="stretch",
+                            key=f"back5_{trip_id}",
+                        )
                     with c2:
                         if st.button(
                             "Save & Retrain",
                             type="primary",
-                            use_container_width=True,
+                            width="stretch",
                             key=f"save_{trip_id}",
                         ):
                             # ---- 1. Compute distance between origin/destination for ML ----
