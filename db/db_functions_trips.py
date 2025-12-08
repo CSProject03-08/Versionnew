@@ -310,7 +310,7 @@ def trip_list_view():
             expanded=False
         ):
             #list details
-            st.write("**Occasion:**", row.occasion or "-")
+            st.write("**Occasion:**", row.occasion)
             st.write("**Start Date:**", row.start_date)
             st.write("**End Date:**", row.end_date)
             st.write("**Start Time:**", row.start_time)
@@ -504,7 +504,7 @@ def past_trip_list_view():
             expanded=False
         ):
             # list details
-            st.write("**Occasion:**", row.occasion or "-")
+            st.write("**Occasion:**", row.occasion)
             st.write("**Start Date:**", row.start_date)
             st.write("**End Date:**", row.end_date)
             st.write("**Start Time:**", row.start_time)
