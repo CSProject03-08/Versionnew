@@ -28,9 +28,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
 from sqlalchemy import create_engine
 
+# SQLAlchemy engine (for pandas read_sql / to_sql)
 DATABASE_URI = st.secrets["azure_db"]["ENGINE"]
 engine = create_engine(DATABASE_URI)
 
+# pyodbc connection details (for table creation / checks)
 SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
 DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
 USERNAME = st.secrets["azure_db"]["USERNAME"]
@@ -42,7 +44,7 @@ CONNECTION_STRING = (
     f'DATABASE={DATABASE_NAME};'
     f'UID={USERNAME};'
     f'PWD={PASSWORD};'
-    'Encrypt=yes;'  
+    'Encrypt=yes;'
     'TrustServerCertificate=no;'
 )
 
@@ -72,22 +74,9 @@ TIER_3_CITIES = {
     "Romanshorn", "Spiez", "Steffisburg", "Villars-sur-Glâne", "Pfäffikon", "Wetzikon"
 }
 
+
 def get_tier(city: str) -> str:
-    """Determines the cost tier of a given city.
-
-    The function checks whether the city appears in one of the predefined
-    tier sets and returns the corresponding tier label. If a city does not
-    appear in any of the sets, it is treated as Tier 3 by default.
-
-    This behaviour can be used as a fallback for cities that do not appear
-    in the seed data, i.e. they are treated as "cheaper" Tier 3 locations.
-
-    Args:
-        city: Name of the city.
-
-    Returns:
-        The tier label "T1", "T2" or "T3".
-    """
+    """Determines the cost tier of a given city."""
     if city in TIER_1_CITIES:
         return "T1"
     if city in TIER_2_CITIES:
@@ -97,31 +86,26 @@ def get_tier(city: str) -> str:
     # Fallback: any unknown city is treated as Tier 3
     return "T3"
 
+
 def connect():
-    """Connects to Azure SQL-database.
-    
-    Returns:
-        pyodbc.Connection"""
+    """Connects to Azure SQL-database and returns a pyodbc.Connection."""
     try:
         conn = pyodbc.connect(CONNECTION_STRING)
         return conn
     except pyodbc.Error as ex:
         sqlstate = ex.args[0]
-        # show the error
         st.error(f"Connection error: {sqlstate}")
         return None
 
+
 def _ensure_table(conn: pyodbc.Connection):
-    """Ensures that the training table exists in the Azure SQL database.
-    The function assumes that the connection has already been opened. 
-    """
+    """Ensures that the training table exists in the Azure SQL database."""
     if conn is None:
         print("No connection to database possible")
         return
 
     try:
         c = conn.cursor()
-
         sql_query = f"""
             IF OBJECT_ID('{TABLE_NAME}', 'U') IS NULL
             BEGIN
@@ -139,16 +123,15 @@ def _ensure_table(conn: pyodbc.Connection):
         c.execute(sql_query)
         conn.commit()
         print(f"INFO: Tabelle '{TABLE_NAME}' ist verifiziert oder wurde erfolgreich erstellt.")
-
     except pyodbc.Error as e:
         print(f"FEHLER: Konnte Tabelle '{TABLE_NAME}' nicht erstellen oder verifizieren: {e}")
-        # rollback if error occures
         conn.rollback()
+
 
 def _make_pipeline():
     """
     Build the sklearn pipeline:
-    - OneHotEncode dest_city
+    - OneHotEncode tier and dest_city
     - pass through distance_km and duration_days as numeric
     - LinearRegression model
     """
@@ -168,7 +151,7 @@ def _make_pipeline():
     ])
     return pipe
 
-# initial train of model with sample data
+
 def initial_train_from_csv(csv_path: str):
     """
     Seeds the database from a CSV (seed_trips.csv) and trains the initial model.
@@ -179,12 +162,9 @@ def initial_train_from_csv(csv_path: str):
       - distance_km
       - total_cost
     All rows are inserted into the training table with a fixed user_id ("seed") and date ("2025-12-07").
-    
-    Args:
-        csv_path: Path to the CSV file containing seed data.
-    
+
     Returns:
-        The mean absolute error (MAE) on a hold-out validation set if there are enough samples; otherwise None.
+        The MAE from retrain_model(), or None.
     """
     df = pd.read_csv(csv_path)
 
@@ -198,45 +178,44 @@ def initial_train_from_csv(csv_path: str):
         ["user_id", "date", "dest_city", "duration_days", "distance_km", "total_cost"]
     ]
 
+    # Ensure table exists using pyodbc
     conn = connect()
     if conn is None:
         return None
     _ensure_table(conn)
     conn.close()
 
-    df_to_db.to_sql(TABLE_NAME, conn, if_exists="append", index=False)
+    # Insert using SQLAlchemy engine (this avoids the pandas DBAPI warnings)
+    df_to_db.to_sql(TABLE_NAME, engine, if_exists="append", index=False)
 
-    # train + save
+    # Train + save
     return retrain_model()
 
-# subsequent training model with user + seed data
+
 def retrain_model():
     """
     Trains or retrains the model on all rows in the table.
 
-    All rows from the training table are loaded and used to fit the model.
-    If there are at least 8 samples, a hold-out validation set is used to
-    compute the mean absolute error (MAE). Otherwise, the model is trained
-    on the full dataset without validation.
-
     The trained pipeline is saved to model.pkl.
-
     Returns:
-        The MAE on the validation set if there are enough samples; otherwise None.
+        The MAE on a validation set if there are enough samples; otherwise None.
     """
+    # Ensure table exists
     conn = connect()
-    _ensure_table(conn)
     if conn is None:
         return None
-
-    df = pd.read_sql_query(
-        f"SELECT dest_city, distance_km, duration_days, total_cost FROM {TABLE_NAME}",
-        conn,
-    )
+    _ensure_table(conn)
     conn.close()
 
+    # Load data using SQLAlchemy engine
+    df = pd.read_sql_query(
+        f"SELECT dest_city, distance_km, duration_days, total_cost FROM {TABLE_NAME}",
+        engine,
+    )
+
     if df.empty:
-        return None 
+        print("No training data found in expenses_user_data.")
+        return None
 
     df["tier"] = df["dest_city"].apply(get_tier)
 
@@ -250,9 +229,11 @@ def retrain_model():
         X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, random_state=42)
         pipe.fit(X_tr, y_tr)
         mae = mean_absolute_error(y_te, pipe.predict(X_te))
+        print(f"Model retrained with hold-out MAE = {mae:.2f}")
     else:
         pipe.fit(X, y)
         mae = None
+        print("Model retrained on full data set (not enough rows for hold-out).")
 
     with open(MODEL_PATH, "wb") as f:
         pickle.dump(pipe, f)
@@ -264,9 +245,9 @@ def load_model():
     """
     Loads the trained model with fallback to seed-based training.
 
-    - If model.pkl is missing, the model tries to train from seed_trips.csv
-    - If unpickling model.pkl fails, the function tries to rebuild the model from seed data.
-    
+    - If model.pkl is missing, the model tries to train from seed_trips.csv.
+    - If unpickling model.pkl fails, the function deletes it and tries to rebuild.
+
     Returns:
         Trained model, or None if loading fails.
     """
@@ -279,6 +260,8 @@ def load_model():
                 initial_train_from_csv(str(csv_path))
             except Exception as e:
                 print(f"Rebuild from seed_trips.csv failed: {e}")
+        else:
+            print("seed_trips.csv not found, cannot rebuild model.")
 
     # 1) No model.pkl yet → try to build it from seed data
     if not MODEL_PATH.exists():
@@ -289,8 +272,13 @@ def load_model():
         with open(MODEL_PATH, "rb") as f:
             return pickle.load(f)
     except Exception as e:
-        # Most likely: incompatible pickle from a different environment
-        print(f"Could not load model.pkl ({e}). Trying to rebuild from seed.")
+        # Most likely: incompatible / corrupt pickle
+        print(f"Could not load model.pkl ({e}). Deleting and trying to rebuild from seed.")
+        try:
+            MODEL_PATH.unlink(missing_ok=True)
+        except Exception as del_err:
+            print(f"Could not delete bad model.pkl: {del_err}")
+
         _train_from_seed_if_possible()
 
         # Try one more time after rebuilding
