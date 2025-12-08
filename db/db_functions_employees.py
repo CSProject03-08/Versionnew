@@ -327,7 +327,6 @@ def employee_listview():
     summaries = st.session_state.expense_summaries
     
     for _, row in trip_df.iterrows():
-    # Alles, was aus der DB kommt, zuerst bereinigen/konvertieren
         origin = str(row["origin"])
         destination = str(row["destination"])
 
@@ -335,6 +334,13 @@ def employee_listview():
         end_date   = _safe_date(row["end_date"])
         start_time = _safe_time(row["start_time"])
         end_time   = _safe_time(row["end_time"])
+
+        # NEU: Occasion robust holen
+        raw_occasion = row.get("occasion", "")
+        if pd.isna(raw_occasion):
+            occasion = ""
+        else:
+            occasion = str(raw_occasion)
 
         trip_id = int(row["trip_ID"])
         is_active = wiz["active_trip_id"] == trip_id
@@ -346,7 +352,7 @@ def employee_listview():
             c1, c2 = st.columns(2)
 
             with c1:
-                st.write("**Occasion:**", row["occasion"])
+                st.write("**Occasion:**", occasion)   # HIER statt row["occasion"]
                 st.write("**Start Date:**", start_date)
                 st.write("**End Date:**", end_date)
                 st.write("**Start Time:**", start_time)
