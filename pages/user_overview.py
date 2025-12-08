@@ -12,16 +12,7 @@ left2, right2 = st.columns([5, 1], gap="large")
 with left2:
     st.title("User Dashboard")
 with right2:
-    if st.button("Logout ", key="redirect"):
-        # deletes data related to session states
-        for key in ["user_ID", "role", "username"]:
-            if key in st.session_state:
-                del st.session_state[key]
-
-        st.success("You have been logged out.")
-
-        # redirects to main.py
-        st.switch_page("main.py")
+    logout()
 
 hide_sidebar()
 
@@ -37,5 +28,4 @@ with left:
     past_trip_view_employee()
 
 with right:
-    logout()
     edit_own_profile()
