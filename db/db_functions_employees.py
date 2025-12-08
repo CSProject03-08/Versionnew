@@ -135,6 +135,7 @@ def employee_listview():
 
             c1, c2 = st.columns(2)
             with c1:
+                st.write("**Trip Details:**")
                 #st.write("**Occasion:**", row.occasion)
                 #st.write("**Start Date:**", row.start_date)
                 #st.write("**End Date:**", row.end_date)
