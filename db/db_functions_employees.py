@@ -135,11 +135,12 @@ def employee_listview():
 
             c1, c2 = st.columns(2)
             with c1:
-                st.markdown("**Occasion:**", str(row.occasion))
-                st.markdown("**Start Date:**", str(row.start_date))
-                st.markdown("**End Date:**", str(row.end_date))
-                st.markdown("**Start Time:**", str(row.start_time))
-                st.markdown("**End Time:**", str(row.end_time))
+                #st.markdown("**Occasion:**", str(row.occasion))
+                #st.markdown("**Start Date:**", str(row.start_date))
+                #st.markdown("**End Date:**", str(row.end_date))
+                #st.markdown("**Start Time:**", str(row.start_time))
+                #st.markdown("**End Time:**", str(row.end_time))
+                " "
 
             with c2:
                 show_trip_weather(
