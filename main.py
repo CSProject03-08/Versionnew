@@ -131,5 +131,5 @@ if submitted:
 
 
 
-"""Not registered yet? You can register as a manager and start planning your business-trips within your company, create a new account and start inviting your employees. Register now:"""
+#"""Not registered yet? You can register as a manager and start planning your business-trips within your company, create a new account and start inviting your employees. Register now:"""
 register_main()
