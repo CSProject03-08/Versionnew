@@ -4,6 +4,7 @@ db_functions_users.py."""
 
 import streamlit as st
 import time
+import pyodbc
 from db.db_functions_users import create_tables, add_user, get_user_by_credentials, get_role_sortkey, register_main, get_user_ID, get_manager_ID, initialize_data, add_user
 import pandas as pd
 import requests
@@ -52,6 +53,22 @@ st.title("Login")
 
 #st.write(f"The public IP address of the streamlit app is: **{get_public_ip()}**")
 
+def connect():
+    """Connects to Azure SQL-database.
+    
+    Args:
+        None
+        
+    Returns:
+        None
+    """
+    try:
+        conn = pyodbc.connect(CONNECTION_STRING)
+        return conn
+    except pyodbc.Error as ex:
+        sqlstate = ex.args[0]
+        st.error(f"Connection error: {sqlstate}")
+        return None
 
 def get_public_ip() -> str:
     """
