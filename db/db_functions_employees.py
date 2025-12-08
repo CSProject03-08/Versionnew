@@ -352,7 +352,9 @@ def employee_listview():
             c1, c2 = st.columns(2)
 
             with c1:
-                st.write("**Occasion:**", occasion)   # HIER statt row["occasion"]
+                occasion_str = "" if occasion is None else str(occasion)
+
+                st.markdown(f"**Occasion:** {occasion_str}")
                 st.write("**Start Date:**", start_date)
                 st.write("**End Date:**", end_date)
                 st.write("**Start Time:**", start_time)
