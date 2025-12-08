@@ -191,7 +191,7 @@ def show_trip_weather(destination: str, start_date, end_date) -> None:
         # place legend below the plotting area (outside) and center it
         legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5),
         # give extra top margin for the title and extra bottom margin for the legend/xaxis label
-        margin=dict(l=40, r=40, t=40, b=80),
+        margin=dict(l=40, r=40, t=100, b=80),
     )
 
     st.plotly_chart(fig, width="stretch")
