@@ -15,6 +15,22 @@ from sqlalchemy import create_engine
 DATABASE_URI = st.secrets["azure_db"]["ENGINE"]
 engine = create_engine(DATABASE_URI)
 
+# Fetching for all information in the st.secrets and defining the connection string for the normal connection where pandas is not involved
+SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
+DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
+USERNAME = st.secrets["azure_db"]["USERNAME"]
+PASSWORD = st.secrets["azure_db"]["PASSWORD"]
+
+CONNECTION_STRING = (
+    'DRIVER={ODBC Driver 17 for SQL Server};'
+    f'SERVER={SERVER_NAME};'
+    f'DATABASE={DATABASE_NAME};'
+    f'UID={USERNAME};'
+    f'PWD={PASSWORD};'
+    'Encrypt=yes;'  
+    'TrustServerCertificate=no;'
+)
+
 # admin password from st.secrets
 ADMIN = st.secrets["dummy"]["ADMIN"]
 
@@ -61,7 +77,7 @@ def create_first_users():
     ckeck_users_df = pd.read_sql_query("""
         SELECT username FROM users 
         WHERE username = ? OR username = ? OR username = ?
-        """, engine, params=('Admin', 'Manager', 'User')
+        """, conn, params=('Admin', 'Manager', 'User')
     )
 
     if len(ckeck_users_df) == 0:
