@@ -7,7 +7,7 @@ USERNAME = st.secrets["azure_db"]["USERNAME"]
 PASSWORD = st.secrets["azure_db"]["PASSWORD"]
 
 CONNECTION_STRING = (
-    'DRIVER={ODBC Driver 18 for SQL Server};'
+    'DRIVER={ODBC Driver 17 for SQL Server};'
     f'SERVER={SERVER_NAME};'
     f'DATABASE={DATABASE_NAME};'
     f'UID={USERNAME};'
