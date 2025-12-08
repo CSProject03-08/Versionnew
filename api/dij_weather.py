@@ -178,6 +178,8 @@ def show_trip_weather(destination: str, start_date, end_date) -> None:
 
     fig.update_layout(
         title=f"Weather for trip to {loc['name']} ({loc.get('admin1', '')})",
+        width=800,
+        height=400,
         xaxis=dict(title="Time"),
         yaxis=dict(title="Temperature [°C]"),
         yaxis2=dict(
