@@ -312,10 +312,15 @@ def trip_list_view():
             #list details
             occasion_val = row.occasion
 
-            if pd.isna(occasion_val) or not isinstance(occasion_val, str) or occasion_val.strip() == "":
+            if occasion_val is None:
                 occasion_val = "No occasion provided"
+            elif isinstance(occasion_val, str):
+                if occasion_val.strip() == "":
+                    occasion_val = str(occasion_val)
+            else:
+                occasion_val = str(occasion_val)
 
-            st.write("**Occasion:**", occasion_val)
+            st.markdown(f"**Occasion:** occasion_val")
             st.write("**Start Date:**", row.start_date)
             st.write("**End Date:**", row.end_date)
             st.write("**Start Time:**", row.start_time)
@@ -511,10 +516,15 @@ def past_trip_list_view():
             # list details
             occasion_val = row.occasion
 
-            if pd.isna(occasion_val) or not isinstance(occasion_val, str) or occasion_val.strip() == "":
+            if occasion_val is None:
                 occasion_val = "No occasion provided"
+            elif isinstance(occasion_val, str):
+                if occasion_val.strip() == "":
+                    occasion_val = str(occasion_val)
+            else:
+                occasion_val = str(occasion_val)
 
-            st.write("**Occasion:**", occasion_val)
+            st.markdown(f"**Occasion:** occasion_val")
             st.write("**Start Date:**", row.start_date)
             st.write("**End Date:**", row.end_date)
             st.write("**Start Time:**", row.start_time)
