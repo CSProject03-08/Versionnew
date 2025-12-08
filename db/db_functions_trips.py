@@ -310,7 +310,10 @@ def trip_list_view():
             expanded=False
         ):
             #list details
-            st.write("**Occasion:**", row.occasion)
+            if row.occasion:
+                st.write("**Occasion:**", row.occasion)
+            else:
+                st.write("**Occasion:**", "Unknown")
             st.write("**Start Date:**", row.start_date)
             st.write("**End Date:**", row.end_date)
             st.write("**Start Time:**", row.start_time)
