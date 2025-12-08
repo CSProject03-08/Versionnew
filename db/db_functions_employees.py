@@ -132,11 +132,11 @@ def employee_listview():
         ):
 
             destination = row.destination
-            occasion = str(row.occasion)
-            start_date_str = str(row.start_date)
-            end_date_str = str(row.end_date)
-            start_time = str(row.start_time)
-            end_time = str(row.end_time)
+            occasion = int(row.occasion)
+            start_date_str = int(row.start_date)
+            end_date_str = int(row.end_date)
+            start_time = int(row.start_time)
+            end_time = int(row.end_time)
 
             c1, c2 = st.columns(2)
             with c1:
