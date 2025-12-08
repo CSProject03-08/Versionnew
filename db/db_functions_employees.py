@@ -28,14 +28,13 @@ USERNAME = st.secrets["azure_db"]["USERNAME"]
 PASSWORD = st.secrets["azure_db"]["PASSWORD"]
 
 CONNECTION_STRING = (
-    'DRIVER=/opt/homebrew/lib/libmsodbcsql.18.dylib;'
-    f'SERVER=tcp:{SERVER_NAME},1433;'
+    'DRIVER={ODBC Driver 17 for SQL Server};'
+    f'SERVER={SERVER_NAME};'
     f'DATABASE={DATABASE_NAME};'
     f'UID={USERNAME};'
     f'PWD={PASSWORD};'
     'Encrypt=yes;'  
     'TrustServerCertificate=no;'
-    'Connection Timeout=30;'
 )
 
 def connect():
@@ -51,11 +50,9 @@ def connect():
         conn = pyodbc.connect(CONNECTION_STRING)
         return conn
     except pyodbc.Error as ex:
-        # pyodbc.Error often contains (sqlstate, message) in ex.args
-        sqlstate = ex.args[0] if len(ex.args) > 0 else "Unknown"
-        msg = ex.args[1] if len(ex.args) > 1 else str(ex)
-        # show a more descriptive error to aid debugging (avoid exposing secrets)
-        st.error(f"Connection error: {sqlstate} — {msg}")
+        sqlstate = ex.args[0]
+        # show the error
+        st.error(f"Connection error: {sqlstate}")
         return None
 
 def employee_listview():
