@@ -26,6 +26,10 @@ from sklearn.pipeline import Pipeline
 from sklearn.linear_model import LinearRegression  # multiple linear regression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
+from sqlalchemy import create_engine
+
+DATABASE_URI = st.secrets["azure_db"]["ENGINE"]
+engine = create_engine(DATABASE_URI)
 
 SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
 DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
@@ -195,12 +199,12 @@ def initial_train_from_csv(csv_path: str):
     ]
 
     conn = connect()
-    _ensure_table(conn)
     if conn is None:
         return None
-    
-    df_to_db.to_sql(TABLE_NAME, conn, if_exists="append", index=False)
+    _ensure_table(conn)
     conn.close()
+
+    df_to_db.to_sql(TABLE_NAME, conn, if_exists="append", index=False)
 
     # train + save
     return retrain_model()
