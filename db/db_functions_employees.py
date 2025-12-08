@@ -355,11 +355,10 @@ def employee_listview():
                 occasion_str = "" if occasion is None else str(occasion)
 
                 st.markdown(f"**Occasion:** {occasion_str}")
-                st.write("**Start Date:**", start_date)
-                st.write("**End Date:**", end_date)
-                st.write("**Start Time:**", start_time)
-                st.write("**End Time:**", end_time)
-
+                st.write("**Start Date:**",  "" if start_date is None else str(start_date))
+                st.write("**End Date:**",    "" if end_date   is None else str(end_date))
+                st.write("**Start Time:**",  "" if start_time is None else str(start_time))
+                st.write("**End Time:**",    "" if end_time   is None else str(end_time))
             with c2:
                 # Wetter-Widget bekommt nur noch die bereits konvertierten Datumswerte
                 show_trip_weather(
