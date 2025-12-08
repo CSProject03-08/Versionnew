@@ -133,20 +133,20 @@ def employee_listview():
             
             destination = row.destination
 
-            #c1, c2 = st.columns(2)
-            #with c1:
-            st.write("**Occasion:**", row.occasion)
-            st.write("**Start Date:**", row.start_date)
-            st.write("**End Date:**", row.end_date)
-            st.write("**Start Time:**", row.start_time)
-            st.write("**End Time:**", row.end_time)
+            c1, c2 = st.columns(2)
+            with c1:
+                st.write("**Occasion:**", row.occasion)
+                st.write("**Start Date:**", row.start_date)
+                st.write("**End Date:**", row.end_date)
+                st.write("**Start Time:**", row.start_time)
+                st.write("**End Time:**", row.end_time)
 
-            #with c2:
-            show_trip_weather(
-                destination=row.destination,
-                start_date=row.start_date,
-                end_date=row.end_date,
-            )
+            with c2:
+                show_trip_weather(
+                    destination=row.destination,
+                    start_date=row.start_date,
+                    end_date=row.end_date,
+                )
 
             #load participants into table
             conn = connect()
