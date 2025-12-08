@@ -317,7 +317,6 @@ def trip_list_view():
 
             st.write("**Occasion:**", occasion_val)
             st.write("**Start Date:**", row.start_date)
-            st.write("**Start Date:**", row.start_date)
             st.write("**End Date:**", row.end_date)
             st.write("**Start Time:**", row.start_time)
             st.write("**End Time:**", row.end_time)
@@ -516,7 +515,6 @@ def past_trip_list_view():
                 occasion_val = "No occasion provided"
 
             st.write("**Occasion:**", occasion_val)
-            st.write("**Start Date:**", row.start_date)
             st.write("**Start Date:**", row.start_date)
             st.write("**End Date:**", row.end_date)
             st.write("**Start Time:**", row.start_time)
