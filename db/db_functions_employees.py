@@ -352,13 +352,42 @@ def employee_listview():
             c1, c2 = st.columns(2)
 
             with c1:
+    # alles zuerst in saubere Strings umwandeln
+                if isinstance(start_date, date):
+                    start_date_str = start_date.strftime("%Y-%m-%d")
+                elif start_date is None:
+                    start_date_str = ""
+                else:
+                    start_date_str = str(start_date)
+
+                if isinstance(end_date, date):
+                    end_date_str = end_date.strftime("%Y-%m-%d")
+                elif end_date is None:
+                    end_date_str = ""
+                else:
+                    end_date_str = str(end_date)
+
+                if isinstance(start_time, dtime):
+                    start_time_str = start_time.strftime("%H:%M")
+                elif start_time is None:
+                    start_time_str = ""
+                else:
+                    start_time_str = str(start_time)
+
+                if isinstance(end_time, dtime):
+                    end_time_str = end_time.strftime("%H:%M")
+                elif end_time is None:
+                    end_time_str = ""
+                else:
+                    end_time_str = str(end_time)
+
                 occasion_str = "" if occasion is None else str(occasion)
 
                 st.markdown(f"**Occasion:** {occasion_str}")
-                st.write("**Start Date:**",  "" if start_date is None else str(start_date))
-                st.write("**End Date:**",    "" if end_date   is None else str(end_date))
-                st.write("**Start Time:**",  "" if start_time is None else str(start_time))
-                st.write("**End Time:**",    "" if end_time   is None else str(end_time))
+                st.markdown(f"**Start Date:** {start_date_str}")
+                st.markdown(f"**End Date:** {end_date_str}")
+                st.markdown(f"**Start Time:** {start_time_str}")
+    st.markdown(f"**End Time:** {end_time_str}")
             with c2:
                 # Wetter-Widget bekommt nur noch die bereits konvertierten Datumswerte
                 show_trip_weather(
