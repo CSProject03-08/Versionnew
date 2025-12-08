@@ -134,7 +134,7 @@ def employee_listview():
             destination = row.destination
 
             c1, c2 = st.columns(2)
-            with c1:
+            with c1:#sollte aus dem kommentar genommen werden. ########################################
                 " "
                 #st.write("**Occasion:**", row.occasion)
                 #st.write("**Start Date:**", row.start_date)
@@ -180,11 +180,11 @@ def employee_listview():
                 method_transport = method_row.iloc[0]["method_transport"] if not method_row.empty else None
 
                 # calling new function
-                show_transportation_details(method_transport,
-                    row.origin,
-                    row.destination,
-                    row.start_date,
-                    row.start_time)
+                #show_transportation_details(method_transport,
+                #    row.origin,
+                #    row.destination,
+                #    row.start_date,
+                #    row.start_time)
 
                # st.subheader("Weather Forecast for your trips")
                # show_trip_weather(
