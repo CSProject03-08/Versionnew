@@ -26,7 +26,7 @@ USERNAME = st.secrets["azure_db"]["USERNAME"]
 PASSWORD = st.secrets["azure_db"]["PASSWORD"]
 
 CONNECTION_STRING = (
-    'DRIVER={ODBC Driver 17 for SQL Server};'
+    'DRIVER={ODBC Driver 18 for SQL Server};'
     f'SERVER={SERVER_NAME};'
     f'DATABASE={DATABASE_NAME};'
     f'UID={USERNAME};'
@@ -291,7 +291,7 @@ def trip_list_view():
 
     # dataframe only for trips whos end dates aren't in the past
     trip_df = pd.read_sql_query("""
-        SELECT trip_ID, origin, destination, start_date, end_date, start_time, end_time, occasion
+        SELECT trip_ID, origin, destination, start_date, end_date, start_time, end_time, occasion, method_transport
         FROM trips
         WHERE manager_ID = ?
         AND CAST(GETDATE() AS DATE) <= end_date
@@ -309,6 +309,12 @@ def trip_list_view():
             f"{row.trip_ID} — {row.origin} → {row.destination} ({row.start_date} → {row.end_date})",
             expanded=False
         ):
+            
+            if row.method_transport == 0:
+                transport_method = "by Car"
+            else:
+                transport_method = "by Public Transport"
+
             #list details
             occasion_text = str(row.occasion) if pd.notna(row.occasion) and row.occasion else "Unknown"
             st.markdown(f"**Occasion:** {occasion_text}")
@@ -316,6 +322,7 @@ def trip_list_view():
             st.markdown(f"**End Date:** {row.end_date}")
             st.markdown(f"**Start Time:** {row.start_time}")
             st.markdown(f"**End Time:** {row.end_time}")
+            st.markdown(f"**Transportation Method:** {transport_method}")
 
             #load participants into table
             conn = connect()
