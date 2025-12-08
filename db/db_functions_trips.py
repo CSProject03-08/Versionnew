@@ -9,7 +9,7 @@ import pandas as pd
 from datetime import date
 from api.api_city_lookup import get_city_coords
 from geopy.distance import geodesic
-from ml.ml_model import load_model
+from ml.ml_model import load_model, get_tier
 from api.api_transportation import transportation_managerview
 from sqlalchemy import create_engine
 
@@ -352,9 +352,12 @@ def trip_list_view():
                     distance_km = geodesic(origin_coords, dest_coords).km
                 else:
                     distance_km = 0.0
+                
+                tier = get_tier(row.destination)
 
                 #build one-row dataframe for the model
                 X_pred = pd.DataFrame([{
+                    "tier": tier,
                     "dest_city": row.destination,
                     "distance_km": distance_km,
                     "duration_days": duration_days,
