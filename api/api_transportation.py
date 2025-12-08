@@ -439,8 +439,8 @@ def show_transportation_details(method_transport, origin, destination, start_dat
             # left column details
             with col1:
                 st.subheader("Car details")
-                st.write(f"**Distance:** {distance}")
-                st.write(f"**Duration:** {duration}")
+                st.markdown(f"**Distance:** {distance}")
+                st.markdown(f"**Duration:** {duration}")
 
             # right column folium map
             with col2:

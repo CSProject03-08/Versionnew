@@ -402,7 +402,7 @@ def trip_list_view():
             
             # edit participants of the trip
             with st.form(f"edit_participants_{row.trip_ID}"):
-                st.write("Manage participants")
+                st.markdown("**Manage participants**")
 
                 # load all participants to edit them for options afterwards
                 conn = connect()
@@ -505,8 +505,7 @@ def past_trip_list_view():
             expanded=False
         ):
             # list details
-            occasion_text = str(row.occasion) if pd.notna(row.occasion) and row.occasion else "Unknown"
-            st.markdown(f"**Occasion:** {occasion_text}")
+            st.markdown(f"**Occasion:** {row.occasion}")
             st.markdown(f"**Start Date:** {row.start_date}")
             st.markdown(f"**End Date:** {row.end_date}")
             st.markdown(f"**Start Time:** {row.start_time}")

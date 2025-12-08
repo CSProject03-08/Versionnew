@@ -387,7 +387,7 @@ def employee_listview():
                 st.markdown(f"**Start Date:** {start_date_str}")
                 st.markdown(f"**End Date:** {end_date_str}")
                 st.markdown(f"**Start Time:** {start_time_str}")
-    st.markdown(f"**End Time:** {end_time_str}")
+                st.markdown(f"**End Time:** {end_time_str}")
             with c2:
                 # Wetter-Widget bekommt nur noch die bereits konvertierten Datumswerte
                 show_trip_weather(
@@ -534,11 +534,11 @@ def past_trip_view_employee():
             expanded=is_active
         ):
             #list details
-            st.write("**Occasion:**", row.occasion)
-            st.write("**Start Date:**", row.start_date)
-            st.write("**End Date:**", row.end_date)
-            st.write("**Start Time:**", row.start_time)
-            st.write("**End Time:**", row.end_time)
+            st.markdown(f"**Occasion:** {row.occasion}")
+            st.markdown(f"**Start Date:** {row.start_date}")
+            st.markdown(f"**End Date:** {row.end_date}")
+            st.markdown(f"**Start Time:** {row.start_time}")
+            st.markdown(f"**End Time:** {row.end_time}")
 
             #load participants into table
             conn = connect()
@@ -589,13 +589,13 @@ def past_trip_view_employee():
                 st.markdown("### Add business trip expense")
                 cols_hdr = st.columns([1, 1])
                 with cols_hdr[0]:
-                    st.write(
+                    st.markdown(
                         "Please fill each category, upload receipts and "
                         "review everything before saving."
                     )
-                    st.write(f"**Trip date:** {start_date} – {end_date}")
-                    st.write(f"**Destination city:** {row.destination}")
-                    st.write(f"**Duration (days):** {duration_days}")
+                    st.markdown(f"**Trip date:** {start_date} – {end_date}")
+                    st.markdown(f"**Destination city:** {row.destination}")
+                    st.markdown(f"**Duration (days):** {duration_days}")
                 with cols_hdr[1]:
                     if st.button(
                         "✖ Close",
@@ -744,7 +744,7 @@ def past_trip_view_employee():
                         + wiz["other_cost"]
                     )
                     st.subheader("Review")
-                    st.write(
+                    st.markdown(
                         f"- **Hotel:** CHF {wiz['hotel_cost']:,.2f} "
                         f"({len(wiz['hotel_files'] or [])} file(s))\n"
                         f"- **Transportation:** CHF {wiz['transport_cost']:,.2f} "
