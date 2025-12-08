@@ -358,9 +358,11 @@ def past_trip_view_employee():
                 st.markdown(f"#### Expense {step} of 5")
 
                 def _next():
+                    """Advance the expense wizard to the next step."""                   
                     wiz["step"] = min(5, wiz["step"] + 1)
 
                 def _back():
+                    """Go back one step in the expense wizard."""
                     wiz["step"] = max(1, wiz["step"] - 1)
 
                 # ---------- Step 1: Hotel ----------

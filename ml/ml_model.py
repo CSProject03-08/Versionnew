@@ -9,7 +9,7 @@ It expects a table called "expenses_user_data" that stores trip records with at 
 - total_cost
 
 The model is trained on these data and saved as "model.pkl" in the same directory as this file.
-If no model exists yet, the module can bootstrap from a local CSV file called "seed_trips.csv".
+If no model exists yet, the module can bootstrap from a CSV file called "seed_trips.csv", the data used for initial training of the model.
 
 In addition, helper functions are provided to classify Swiss cities into three cost tiers.
 Cities that are not explicitly listed in any tier are treated as Tier 3 by default.
