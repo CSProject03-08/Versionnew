@@ -4,8 +4,11 @@ imported from db_functions_users.py."""
 import streamlit as st
 import pandas as pd
 from db.db_functions_users import register_user_dropdown_admin, edit_user_dropdown_admin, get_users_under_me, del_user_dropdown_admin
+from utils import hide_sidebar, logout 
+
 
 st.set_page_config(page_title="Admin Dashboard", layout="wide")
+hide_sidebar()
 st.title("Admin Dashboard")
 
 # Access control, so only admin can access this page
@@ -26,6 +29,7 @@ with left:
         st.dataframe(df, width="stretch")
 
 with right:
+    logout()
     st.subheader("User Management")
     register_user_dropdown_admin()
     del_user_dropdown_admin()
