@@ -297,7 +297,7 @@ def trip_list_view():
         AND CAST(GETDATE() AS DATE) <= end_date
         AND show_trip_m = 1
         ORDER BY start_date
-    """, engine, params=(manager_ID,))
+    """, conn, params=(manager_ID,))
     conn.close()
 
     if trip_df.empty:
@@ -325,7 +325,7 @@ def trip_list_view():
                 JOIN user_trips ut ON ut.user_ID = u.user_ID
                 WHERE ut.trip_ID = ?
                 ORDER BY u.username
-            """, engine, params=(row.trip_ID,))
+            """, conn, params=(row.trip_ID,))
             conn.close()
 
             # display the dataframe with the participants
@@ -409,7 +409,7 @@ def trip_list_view():
                 all_users_df = pd.read_sql_query("""SELECT u.user_ID, u.username FROM users u 
                     WHERE u.manager_ID = ? 
                     ORDER BY username
-                """, engine, params=(manager_ID,),
+                """, conn, params=(manager_ID,),
                 )
                 conn.close()
 
@@ -421,7 +421,7 @@ def trip_list_view():
                     JOIN user_trips ut ON ut.user_ID = u.user_ID
                     WHERE ut.trip_ID = ?
                     AND u.manager_ID = ?
-                """, engine, params=(row.trip_ID, manager_ID), 
+                """, conn, params=(row.trip_ID, manager_ID), 
                 )
                 conn.close()
 
@@ -491,7 +491,7 @@ def past_trip_list_view():
         AND CAST(GETDATE() AS DATE) > end_date
         AND show_trip_m = 1
         ORDER BY start_date
-    """, engine, params=(manager_ID,))
+    """, conn, params=(manager_ID,))
     conn.close()
 
     if trip_df.empty:
@@ -519,7 +519,7 @@ def past_trip_list_view():
                 JOIN user_trips ut ON ut.user_ID = u.user_ID
                 WHERE ut.trip_ID = ?
                 ORDER BY u.username
-            """, engine, params=(row.trip_ID,))
+            """, conn, params=(row.trip_ID,))
             conn.close()
 
             st.markdown("**Participants:**")

@@ -1007,7 +1007,7 @@ def get_users_under_me() -> pd.DataFrame | None:
         # uses pandas to read the sql query into a DataFrame
         df = pd.read_sql_query(
             sql_query, 
-            engine, 
+            conn, 
             params=(current,) # params as tuple
         )
         if not df.empty:

@@ -95,7 +95,7 @@ def employee_listview():
             AND ? <= t.end_date
             AND t.show_trip_e = 1
             ORDER BY t.start_date ASC
-            """, engine, params=(user_id, date.today()))
+            """, conn, params=(user_id, date.today()))
     
     except pd.io.sql.DatabaseError as e:
         st.error(f"Error fetching trips from database: {e}")
@@ -199,7 +199,7 @@ def employee_listview():
                         JOIN user_trips ut ON ut.user_ID = u.user_ID
                         WHERE ut.trip_ID = ?
                         ORDER BY u.username
-                    """, engine, params=(row.trip_ID,))
+                    """, conn, params=(row.trip_ID,))
 
                     st.markdown("**Participants:**")
                     st.dataframe(participants, hide_index=True, width="stretch")
@@ -214,7 +214,7 @@ def employee_listview():
                 conn = connect()
                 method_row = pd.read_sql_query("""
                     SELECT method_transport FROM trips WHERE trip_ID = ?
-                """, engine, params=(row.trip_ID,))
+                """, conn, params=(row.trip_ID,))
                 conn.close()
 
                 method_transport = method_row.iloc[0]["method_transport"] if not method_row.empty else None
@@ -284,7 +284,7 @@ def past_trip_view_employee():
             AND ? > end_date                      
             AND t.show_trip_e = 1
             ORDER BY t.start_date ASC
-            """, engine, params=(user_id, date.today()))
+            """, conn, params=(user_id, date.today()))
 
     except pd.io.sql.DatabaseError as e:
         st.error(f"Error fetching past trips from database: {e}")
@@ -340,7 +340,7 @@ def past_trip_view_employee():
                         JOIN user_trips ut ON ut.user_ID = u.user_ID
                         WHERE ut.trip_ID = ?
                         ORDER BY u.username
-                    """, engine, params=(row.trip_ID,))
+                    """, conn, params=(row.trip_ID,))
 
                     st.markdown("**Participants:**")
                     st.dataframe(participants, hide_index=True, width="stretch")
