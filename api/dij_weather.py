@@ -180,7 +180,6 @@ def show_trip_weather(destination: str, start_date, end_date) -> None:
         title=f"Weather for trip to {loc['name']} ({loc.get('admin1', '')})",
         width=800,
         height=400,
-        xaxis=dict(title="Time"),
         yaxis=dict(title="Temperature [°C]"),
         yaxis2=dict(
             title="Chances of rain [%]",
@@ -189,8 +188,10 @@ def show_trip_weather(destination: str, start_date, end_date) -> None:
             range=[0, 100],
         ),
         bargap=0,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-        margin=dict(l=40, r=40, t=40, b=40),
+        # place legend below the plotting area (outside) and center it
+        legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5),
+        # give extra top margin for the title and extra bottom margin for the legend/xaxis label
+        margin=dict(l=40, r=40, t=40, b=80),
     )
 
     st.plotly_chart(fig, width="stretch")
