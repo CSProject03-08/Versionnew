@@ -161,7 +161,8 @@ def employee_listview():
                     """, engine, params=(row.trip_ID,))
 
                     st.markdown("**Participants:**")
-                    st.dataframe(participants, hide_index=True, width="stretch")
+                    #st.dataframe(participants, hide_index=True, width="stretch")
+                    st.dataframe(participants, hide_index=True, use_container_width=True)
                 except pd.io.sql.DatabaseError as e:
                     st.error(f"Error fetching participants: {e}")
                 finally:
