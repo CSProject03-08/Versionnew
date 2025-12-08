@@ -8,6 +8,7 @@ from db.db_functions_users import create_tables, add_user, get_user_by_credentia
 import pandas as pd
 import requests
 from sqlalchemy import create_engine
+from utils import hide_sidebar
 
 # The engine serves as a central gateway to the database (MS Azure SQL). 
 # It manages the connections and translates Python commands into the appropriate SQL dialect.
@@ -36,6 +37,7 @@ ADMIN = st.secrets["dummy"]["ADMIN"]
 
 # basic page settings
 st.set_page_config(page_title="Login", layout="centered", initial_sidebar_state="collapsed")
+hide_sidebar()
 st.title("Login")
 
 #ADMIN = st.secrets["dummy"]["ADMIN"]
