@@ -147,7 +147,7 @@ def create_trip_dropdown(title: str = "Create new trip"):
                                         JOIN roles r ON u.role = r.role 
                                         WHERE r.sortkey < 3
                                         AND u.manager_ID = ? 
-                                        ORDER BY username""", engine, params=(manager_ID,),
+                                        ORDER BY username""", conn, params=(manager_ID,),
             )
             conn.close()
 
