@@ -51,9 +51,11 @@ def connect():
         conn = pyodbc.connect(CONNECTION_STRING)
         return conn
     except pyodbc.Error as ex:
-        sqlstate = ex.args[0]
-        # show the error
-        st.error(f"Connection error: {sqlstate}")
+        # pyodbc.Error often contains (sqlstate, message) in ex.args
+        sqlstate = ex.args[0] if len(ex.args) > 0 else "Unknown"
+        msg = ex.args[1] if len(ex.args) > 1 else str(ex)
+        # show a more descriptive error to aid debugging (avoid exposing secrets)
+        st.error(f"Connection error: {sqlstate} — {msg}")
         return None
 
 def employee_listview():
