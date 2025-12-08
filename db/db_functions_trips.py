@@ -311,11 +311,11 @@ def trip_list_view():
         ):
             #list details
             occasion_text = str(row.occasion) if pd.notna(row.occasion) and row.occasion else "Unknown"
-            st.write("**Occasion:**", occasion_text)
-            st.write("**Start Date:**", row.start_date)
-            st.write("**End Date:**", row.end_date)
-            st.write("**Start Time:**", row.start_time)
-            st.write("**End Time:**", row.end_time)
+            st.markdown(f"**Occasion:** {occasion_text}")
+            st.markdown(f"**Start Date:** {row.start_date}")
+            st.markdown(f"**End Date:** {row.end_date}")
+            st.markdown(f"**Start Time:** {row.start_time}")
+            st.markdown(f"**End Time:** {row.end_time}")
 
             #load participants into table
             conn = connect()
@@ -506,11 +506,11 @@ def past_trip_list_view():
         ):
             # list details
             occasion_text = str(row.occasion) if pd.notna(row.occasion) and row.occasion else "Unknown"
-            st.write("**Occasion:**", occasion_text)
-            st.write("**Start Date:**", row.start_date)
-            st.write("**End Date:**", row.end_date)
-            st.write("**Start Time:**", row.start_time)
-            st.write("**End Time:**", row.end_time)
+            st.markdown(f"**Occasion:** {occasion_text}")
+            st.markdown(f"**Start Date:** {row.start_date}")
+            st.markdown(f"**End Date:** {row.end_date}")
+            st.markdown(f"**Start Time:** {row.start_time}")
+            st.markdown(f"**End Time:** {row.end_time}")
 
             # load participants into table
             conn = connect()
