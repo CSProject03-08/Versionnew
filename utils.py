@@ -6,7 +6,7 @@ def logout():
     Returns:
         None
     """
-    if st.button(" Logout", type="secondary"):
+    if st.button(" Logout", type="tertiary"):
         # deletes data related to session states
         for key in ["user_ID", "role", "username"]:
             if key in st.session_state:
