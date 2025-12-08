@@ -7,7 +7,7 @@ import pandas as pd
 from api.api_city_lookup import get_city_coords
 from ml.ml_model import retrain_model
 from db.expenses_user import insert_expense_for_training
-from datetime import date
+from datetime import date, datetime, time as dtime
 from geopy.distance import geodesic
 #from api.weather import weather_widget
 from api.api_transportation import show_transportation_details
@@ -120,16 +120,56 @@ def employee_listview_old():
     summaries = st.session_state.expense_summaries
     
     for _, row in trip_df.iterrows():
-        start_date = pd.to_datetime(row.start_date).date()
-        end_date = pd.to_datetime(row.end_date).date()
+    # Strings für Anzeige
+        origin = str(row["origin"])
+        destination = str(row["destination"])
 
-        trip_id = row.trip_ID
+        # Rohwerte aus dem DataFrame holen
+        raw_start_date = row["start_date"]
+        raw_end_date   = row["end_date"]
+        raw_start_time = row["start_time"]
+        raw_end_time   = row["end_time"]
+
+        # start_date robust in ein date-Objekt umwandeln
+        if isinstance(raw_start_date, (datetime, pd.Timestamp)):
+            start_date = raw_start_date.date()
+        elif isinstance(raw_start_date, date):
+            start_date = raw_start_date
+        else:
+            start_date = pd.to_datetime(str(raw_start_date)).date()
+
+        # end_date robust in ein date-Objekt umwandeln
+        if isinstance(raw_end_date, (datetime, pd.Timestamp)):
+            end_date = raw_end_date.date()
+        elif isinstance(raw_end_date, date):
+            end_date = raw_end_date
+        else:
+            end_date = pd.to_datetime(str(raw_end_date)).date()
+
+        # start_time robust in ein time-Objekt umwandeln
+        if isinstance(raw_start_time, (datetime, pd.Timestamp)):
+            start_time = raw_start_time.time()
+        elif isinstance(raw_start_time, dtime):
+            start_time = raw_start_time
+        else:
+            start_time = pd.to_datetime(str(raw_start_time)).time()
+
+        # end_time robust in ein time-Objekt umwandeln (optional, analog)
+        if isinstance(raw_end_time, (datetime, pd.Timestamp)):
+            end_time = raw_end_time.time()
+        elif isinstance(raw_end_time, dtime):
+            end_time = raw_end_time
+        else:
+            end_time = pd.to_datetime(str(raw_end_time)).time()
+
+        trip_id = int(row["trip_ID"])
         is_active = wiz["active_trip_id"] == trip_id
-        
+
         with st.expander(
-            f"{row.trip_ID}: - {row.origin} → {row.destination} ({row.start_date} → {row.end_date})",
-            expanded=is_active
+            f"{trip_id}: - {origin} → {destination} ({start_date} → {end_date})",
+            expanded=is_active,
         ):
+
             
             destination = row.destination
 
