@@ -33,7 +33,6 @@ with left:
         st.dataframe(df, width="stretch")
 
 with right:
-    logout()
     st.subheader("User Management")
     register_user_dropdown_admin()
     del_user_dropdown_admin()
