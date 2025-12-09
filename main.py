@@ -41,7 +41,7 @@ st.set_page_config(page_title="Login", layout="centered", initial_sidebar_state=
 hide_sidebar()
 st.title("Login")
 
-#ADMIN = st.secrets["dummy"]["ADMIN"]
+ADMIN = st.secrets["dummy"]["ADMIN"]
 
 # display of the current ip adress from streamlit to adjust the firewall of MS Azure when app gets rebooted
 #def get_public_ip():
@@ -90,7 +90,7 @@ st.caption(f"The public IP address of the streamlit app is: **{ip_info}**")
 
 #create db and table 'users' if non-existent
 create_tables()
-#initialize_data()
+initialize_data()
 # add ADMIN to user.db if they do not exist
 def create_first_users():
     ckeck_users_df = pd.read_sql_query("""
