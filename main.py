@@ -104,7 +104,7 @@ def create_first_users():
     else:
         pass
     
-#create_first_users()
+create_first_users()
 
 # Login-inputs, with censored password
 with st.form("login_form"):
