@@ -35,5 +35,5 @@ with left:
 with right:
     st.subheader("User Management")
     register_user_dropdown_admin()
-    del_user_dropdown_admin()
     edit_user_dropdown_admin(title="Edit user")
+    del_user_dropdown_admin()
