@@ -17,6 +17,22 @@ st.set_page_config(page_title="Login", layout="centered", initial_sidebar_state=
 hide_sidebar()
 st.title("Login")
 
+def get_public_ip() -> str:
+    """
+    Tries to fetch the public IP. Never raises,
+    always returns a string (either IP or error message).
+    """
+    try:
+        resp = requests.get("https://api.ipify.org?format=json", timeout=5)
+        resp.raise_for_status()
+        data = resp.json()
+        return data.get("ip", "unknown")
+    except Exception as e:
+        # Alles abfangen und nur als Text zurückgeben
+        return f"Error fetching IP: {e}"
+
+ip_info = get_public_ip()
+st.caption(f"The public IP address of the streamlit app is: **{ip_info}**")
 CONNECTION_STRING = load_secrets()
 
 # admin password from st.secrets
