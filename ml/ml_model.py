@@ -23,30 +23,17 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.pipeline import Pipeline
-from sklearn.linear_model import LinearRegression  # multiple linear regression
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error
 from sqlalchemy import create_engine
+from utils import load_secrets
+import urllib
 
-# SQLAlchemy engine (for pandas read_sql / to_sql)
-DATABASE_URI = st.secrets["azure_db"]["ENGINE"]
-engine = create_engine(DATABASE_URI)
+CONNECTION_STRING = load_secrets()
+connect_uri = "mssql+pyodbc:///?odbc_connect=" + urllib.parse.quote_plus(CONNECTION_STRING)
+engine = create_engine(connect_uri, fast_executemany=True)
 
-# pyodbc connection details (for table creation / checks)
-SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
-DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
-USERNAME = st.secrets["azure_db"]["USERNAME"]
-PASSWORD = st.secrets["azure_db"]["PASSWORD"]
-
-CONNECTION_STRING = (
-    'DRIVER={ODBC Driver 17 for SQL Server};'
-    f'SERVER={SERVER_NAME};'
-    f'DATABASE={DATABASE_NAME};'
-    f'UID={USERNAME};'
-    f'PWD={PASSWORD};'
-    'Encrypt=yes;'
-    'TrustServerCertificate=no;'
-)
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -133,7 +120,7 @@ def _make_pipeline():
     Build the sklearn pipeline:
     - OneHotEncode tier and dest_city
     - pass through distance_km and duration_days as numeric
-    - LinearRegression model
+    - RandomForestRegressor model
     """
     categorical_cols = ["tier", "dest_city"]
     numeric_cols = ["distance_km", "duration_days"]
@@ -147,7 +134,11 @@ def _make_pipeline():
 
     pipe = Pipeline(steps=[
         ("pre", preprocessor),
-        ("model", LinearRegression()),
+        ("model", RandomForestRegressor(
+            n_estimators=200,
+            random_state=42,
+            n_jobs=-1
+        )),
     ])
     return pipe
 
