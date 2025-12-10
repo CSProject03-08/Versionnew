@@ -68,6 +68,6 @@ def load_secrets():
         'Encrypt=yes;'  
         'TrustServerCertificate=no;'
     )
-    return odbc_str
+    return CONNECTION_STRING
 
    
