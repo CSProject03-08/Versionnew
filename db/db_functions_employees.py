@@ -149,21 +149,21 @@ def employee_listview():
                 st.error(f"Error fetching participants: {e}")
 
 
-                st.markdown("Transportation Details")
+            st.markdown("Transportation Details")
 
-                #Transport method loading
-                method_row = pd.read_sql_query("""
-                    SELECT method_transport FROM trips WHERE trip_ID = ?
-                """, engine, params=(row.trip_ID,))
+            #Transport method loading
+            method_row = pd.read_sql_query("""
+                SELECT method_transport FROM trips WHERE trip_ID = ?
+            """, engine, params=(row.trip_ID,))
 
-                method_transport = method_row.iloc[0]["method_transport"] if not method_row.empty else None
+            method_transport = method_row.iloc[0]["method_transport"] if not method_row.empty else None
 
-                # calling new function
-                show_transportation_details(method_transport,
-                    row.origin,
-                    row.destination,
-                    row.start_date,
-                    row.start_time)
+            # calling new function
+            show_transportation_details(method_transport,
+                row.origin,
+                row.destination,
+                row.start_date,
+                row.start_time)
 
             try:
                 news_widget(destination)
