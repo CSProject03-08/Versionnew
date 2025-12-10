@@ -12,28 +12,12 @@ from geopy.distance import geodesic
 from ml.ml_model import load_model, get_tier
 from api.api_transportation import transportation_managerview
 from sqlalchemy import create_engine
+from utils import load_secrets
+import urllib
 
-# The engine serves as a central gateway to the database (MS Azure SQL). 
-# It manages the connections and translates Python commands into the appropriate SQL dialect.
-# pandas requires this!
-DATABASE_URI = st.secrets["azure_db"]["ENGINE"]
-engine = create_engine(DATABASE_URI)
-
-# Fetching for all information in the st.secrets and defining the connection string for the normal connection where pandas is not involved
-SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
-DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
-USERNAME = st.secrets["azure_db"]["USERNAME"]
-PASSWORD = st.secrets["azure_db"]["PASSWORD"]
-
-CONNECTION_STRING = (
-    'DRIVER={ODBC Driver 17 for SQL Server};'
-    f'SERVER={SERVER_NAME};'
-    f'DATABASE={DATABASE_NAME};'
-    f'UID={USERNAME};'
-    f'PWD={PASSWORD};'
-    'Encrypt=yes;'  
-    'TrustServerCertificate=no;'
-)
+CONNECTION_STRING = load_secrets()
+connect_uri = "mssql+pyodbc:///?odbc_connect=" + urllib.parse.quote_plus(CONNECTION_STRING)
+engine = create_engine(connect_uri, fast_executemany=True)
 
 
 def connect():
@@ -283,9 +267,6 @@ def trip_list_view():
     Returns:
         None
     """
-    conn = connect()
-    if conn is None:
-        return
     
     manager_ID = int(st.session_state["user_ID"]) # getting the parameter for the query
 
@@ -297,8 +278,7 @@ def trip_list_view():
         AND CAST(GETDATE() AS DATE) <= end_date
         AND show_trip_m = 1
         ORDER BY start_date
-    """, conn, params=(manager_ID,))
-    conn.close()
+    """, engine, params=(manager_ID,))
 
     if trip_df.empty:
         st.info("No trips available.")
@@ -325,19 +305,17 @@ def trip_list_view():
             st.markdown(f"**Transportation Method:** {transport_method}")
 
             #load participants into table
-            conn = connect()
             participants = pd.read_sql_query("""
                 SELECT u.username, u.email
                 FROM users u
                 JOIN user_trips ut ON ut.user_ID = u.user_ID
                 WHERE ut.trip_ID = ?
                 ORDER BY u.username
-            """, conn, params=(row.trip_ID,))
-            conn.close()
+            """, engine, params=(row.trip_ID,))
 
             # display the dataframe with the participants
             st.markdown("**Participants:**")
-            st.dataframe(participants, hide_index=True, width="stretch")
+            st.dataframe(participants, hide_index=True)
 
             # ML model for the cost forecast
             num_participants = len(participants)
@@ -412,25 +390,21 @@ def trip_list_view():
                 st.markdown("**Manage participants**")
 
                 # load all participants to edit them for options afterwards
-                conn = connect()
                 all_users_df = pd.read_sql_query("""SELECT u.user_ID, u.username FROM users u 
                     WHERE u.manager_ID = ? 
                     ORDER BY username
-                """, conn, params=(manager_ID,),
+                """, engine, params=(manager_ID,),
                 )
-                conn.close()
 
                 # load participants from this trip for default value afterwards
-                conn = connect()
                 current_df = pd.read_sql_query("""
                     SELECT u.user_ID, u.username
                     FROM users u
                     JOIN user_trips ut ON ut.user_ID = u.user_ID
                     WHERE ut.trip_ID = ?
                     AND u.manager_ID = ?
-                """, conn, params=(row.trip_ID, manager_ID), 
+                """, engine, params=(row.trip_ID, manager_ID), 
                 )
-                conn.close()
 
                 # multiselect to choose from
                 selected_users = st.multiselect(
@@ -484,10 +458,6 @@ def past_trip_list_view():
     """
     st.subheader("Past trips")
 
-    conn = connect()
-    if conn is None:
-        return
-    
     manager_ID = int(st.session_state["user_ID"])
 
     # dataframe only for trips whos end dates are in the past
@@ -498,8 +468,7 @@ def past_trip_list_view():
         AND CAST(GETDATE() AS DATE) > end_date
         AND show_trip_m = 1
         ORDER BY start_date
-    """, conn, params=(manager_ID,))
-    conn.close()
+    """, engine, params=(manager_ID,))
 
     if trip_df.empty:
         st.info("No trips available.")
@@ -519,18 +488,16 @@ def past_trip_list_view():
             st.markdown(f"**End Time:** {row.end_time}")
 
             # load participants into table
-            conn = connect()
             participants = pd.read_sql_query("""
                 SELECT u.username, u.email
                 FROM users u
                 JOIN user_trips ut ON ut.user_ID = u.user_ID
                 WHERE ut.trip_ID = ?
                 ORDER BY u.username
-            """, conn, params=(row.trip_ID,))
-            conn.close()
+            """, engine, params=(row.trip_ID,))
 
             st.markdown("**Participants:**")
-            st.dataframe(participants, hide_index=True, width="stretch")
+            st.dataframe(participants, hide_index=True)
 
     # form to archive the trips
     with st.form("Archive past trips"):

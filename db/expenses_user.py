@@ -1,20 +1,12 @@
 import pyodbc
 import streamlit as st
+from utils import load_secrets
+from sqlalchemy import create_engine
+import urllib
 
-SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
-DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
-USERNAME = st.secrets["azure_db"]["USERNAME"]
-PASSWORD = st.secrets["azure_db"]["PASSWORD"]
-
-CONNECTION_STRING = (
-    'DRIVER={ODBC Driver 17 for SQL Server};'
-    f'SERVER={SERVER_NAME};'
-    f'DATABASE={DATABASE_NAME};'
-    f'UID={USERNAME};'
-    f'PWD={PASSWORD};'
-    'Encrypt=yes;'  
-    'TrustServerCertificate=no;'
-)
+CONNECTION_STRING = load_secrets()
+connect_uri = "mssql+pyodbc:///?odbc_connect=" + urllib.parse.quote_plus(CONNECTION_STRING)
+engine = create_engine(connect_uri, fast_executemany=True)
 
 def connect():
     """Connects to Azure SQL-database"""
@@ -45,7 +37,7 @@ def insert_expense_for_training(dest_city, distance_km, duration_days, total_cos
         c.execute("""
             INSERT INTO expenses_user_data (user_id, dest_city, duration_days, distance_km, total_cost)
             VALUES (?, ?, ?, ?, ?)
-        """, params=(user_id, dest_city, duration_days, distance_km, total_cost))
+        """, (user_id, dest_city, duration_days, distance_km, total_cost))
         conn.commit()
         st.success("Successful saved in database")
         return True

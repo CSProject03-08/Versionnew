@@ -7,28 +7,14 @@ import streamlit as st
 import pandas as pd
 import bcrypt
 from sqlalchemy import create_engine
+from utils import load_secrets
+import urllib
 
-# The engine serves as a central gateway to the database (MS Azure SQL). 
-# It manages the connections and translates Python commands into the appropriate SQL dialect.
-# pandas requires this!
-DATABASE_URI = st.secrets["azure_db"]["ENGINE"]
-engine = create_engine(DATABASE_URI)
 
-# Fetching for all information in the st.secrets and defining the connection string for the normal connection where pandas is not involved
-SERVER_NAME = st.secrets["azure_db"]["SERVER_NAME"]
-DATABASE_NAME = st.secrets["azure_db"]["DATABASE_NAME"]
-USERNAME = st.secrets["azure_db"]["USERNAME"]
-PASSWORD = st.secrets["azure_db"]["PASSWORD"]
+CONNECTION_STRING = load_secrets()
+connect_uri = "mssql+pyodbc:///?odbc_connect=" + urllib.parse.quote_plus(CONNECTION_STRING)
+engine = create_engine(connect_uri, fast_executemany=True)
 
-CONNECTION_STRING = (
-    'DRIVER={ODBC Driver 17 for SQL Server};'
-    f'SERVER={SERVER_NAME};'
-    f'DATABASE={DATABASE_NAME};'
-    f'UID={USERNAME};'
-    f'PWD={PASSWORD};'
-    'Encrypt=yes;'  
-    'TrustServerCertificate=no;'
-)
 
 def connect():
     """Connects to Azure SQL-database.
@@ -222,34 +208,11 @@ def add_user(username, password, email, role):
             (username, hashed_pw, email, role, manager_ID)
         )
         conn.commit()
-        print(f"✅ User '{username}' sucessfully added!")
+        print(f" User '{username}' sucessfully added!")
     except pyodbc.Error as ex:
         print(f"User '{username}' exists already or another database error occurred: {ex}")
     finally:
         conn.close()
-
-### Comparison from inputs to databank, old is without bcyrypt as backup here ###
-#def get_user_by_credentials_old(username, password):
-#    """Fetches user data based on the provided username and password.
-#    Args:
-#        username (str): The username of the user to fetch.
-#        password (str): The password of the user to fetch.
-#    
-#    Returns:
-#        tuple: User data if found, else None.
-#    """
-#    hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-#    conn = connect()
-#    if conn is None:
-#        return
-#    c = conn.cursor()
-#    c.execute(
-#        "SELECT username, role FROM users WHERE username = ? AND password = ?",
-#    )
-#        (username, hashed_pw)
-#    user = c.fetchone()
-#    conn.close()
-#    return user
 
 def get_user_by_credentials(username, password):
     """Fetches user data based on the provided username and password.
@@ -397,7 +360,7 @@ def register_user_dropdown(title: str = "Register new user"):
             with col2:
                 password  = st.text_input("Password", type="password")
                 password2 = st.text_input("Confirm password", type="password")
-                role      = st.selectbox("Rolle", role_names if role_names else ["— no available role —"])
+                role      = st.selectbox("Role", role_names if role_names else ["— no available role —"])
 
             submitted = st.form_submit_button("Register")
         # Process form submission
@@ -449,7 +412,7 @@ def register_user_dropdown_admin(title: str = "Register new user"):
             with col2:
                 password  = st.text_input("Password", type="password")
                 password2 = st.text_input("Confirm password", type="password")
-                role      = st.selectbox("Rolle", role_names if role_names else ["— no available role —"])
+                role      = st.selectbox("Role", role_names if role_names else ["— no available role —"])
 
             submitted = st.form_submit_button("Register")
 
@@ -581,8 +544,7 @@ def del_user_dropdown_admin(title: str = "Delete user"):
             try:
                 c.execute("DELETE FROM users WHERE username = ?", (username,))
                 conn.commit()
-                conn.close()
-                st.success(f"✅ User '{username}' has been deleted.")
+                st.success(f" User '{username}' has been deleted.")
                 time.sleep(2)
                 st.rerun()
             # error if this is a manager that is assigned to other users
@@ -991,9 +953,6 @@ def get_users_under_me() -> pd.DataFrame | None:
         return None
 
     current = st.session_state["role_sortkey"]
-    conn = connect()
-    if not conn:
-        return None 
 
     try:
         sql_query = """
@@ -1007,58 +966,11 @@ def get_users_under_me() -> pd.DataFrame | None:
         # uses pandas to read the sql query into a DataFrame
         df = pd.read_sql_query(
             sql_query, 
-            conn, 
+            engine, 
             params=(current,) # params as tuple
         )
         if not df.empty:
             return df
-
-    finally:
-        conn.close()
-
-
-##################################################################
-# non-database related user functions below
-##################################################################
-def logout():
-    """Logs out the user and redirects to main.py.
-    Args:
-        None    
-        
-    Returns:
-        None
-    """
-    if st.button(" Logout", type="secondary"):
-        # deletes data related to session states
-        for key in ["user_ID", "role", "username"]:
-            if key in st.session_state:
-                del st.session_state[key]
-
-        st.success("You have been logged out.")
-
-        # redirects to main.py
-        st.switch_page("main.py")
-
-import streamlit as st
-
-def hide_sidebar():
-    """Completely hides the Streamlit sidebar, including the toggle button."""
-    hide_sidebar_css = """
-        <style>
-            /* Hide the sidebar itself */
-            [data-testid="stSidebar"] {
-                display: none !important;
-            }
-
-            /* Hide the little toggle arrow */
-            [data-testid="stSidebarNav"] {
-                display: none !important;
-            }
-
-            /* Hide the entire sidebar container */
-            section[data-testid="stSidebar"] {
-                display: none !important;
-            }
-        </style>
-    """
-    st.markdown(hide_sidebar_css, unsafe_allow_html=True)
+    except Exception as e:
+        st.error(f"Error fetching users: {e}")
+        return None
