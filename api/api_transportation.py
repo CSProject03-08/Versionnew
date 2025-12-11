@@ -544,7 +544,7 @@ def show_transportation_details(method_transport, origin, destination, start_dat
                 df.index = [i + 1 for i in range(len(df))]
                 df.index.name = "Connection"
 
-                st.dataframe(df, width="stretch")
+                st.dataframe(df)
         
         # right column folium map
         with col2:
@@ -600,3 +600,4 @@ def show_transportation_details(method_transport, origin, destination, start_dat
                 st.warning("Could not retrieve transit route from Google Maps.")
     else:
         st.info("No transport method stored for this trip.")
+
