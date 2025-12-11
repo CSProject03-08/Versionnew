@@ -139,3 +139,4 @@ def news_widget(destination: str):
         # dünne Trennlinie zwischen den Artikeln
         if i < len(news):
             st.markdown("---")
+
