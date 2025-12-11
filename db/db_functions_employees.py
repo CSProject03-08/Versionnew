@@ -1,7 +1,7 @@
 """db_function_employees.py defines the necessary functions, mainly used in the user_overview.py. Most of the functions take the data from users.db and show/visualize it."""
 
 import pyodbc
-import time
+import time 
 import streamlit as st
 import pandas as pd
 from api.api_city_lookup import get_city_coords
