@@ -30,7 +30,7 @@ with left:
     elif df.empty:
         st.info("No user with a lower sortkey found.")
     else:
-        st.dataframe(df, width="stretch")
+        st.dataframe(df)
 
 with right:
     st.subheader("User Management")
